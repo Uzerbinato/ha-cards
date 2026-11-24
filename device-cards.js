@@ -116,5 +116,40 @@ class NetCard extends HTMLElement {
   }
 }
 customElements.define('net-card', NetCard);
+
+// host-card: computer/server con risorse (CPU, temperatura, RAM, disco, rete, avvio)
+//   config: name, subtitle, image (foto, facoltativa), ip, cpu, temp, mem, disk, load, boot (timestamp ultimo avvio), net_in, net_out (MB/s o Mbit/s)
+class HostCard extends HTMLElement {
+  setConfig(c) { this._c = c; if (!this.shadowRoot) this.attachShadow({ mode: 'open' }); }
+  getCardSize() { return 4; }
+  getGridOptions() { return { columns: 12, min_columns: 6, rows: 'auto' }; }
+  set hass(h) {
+    const c = this._c, g = (k) => num(h, c[k]), u = (k) => (c[k] && h.states[c[k]] ? h.states[c[k]].attributes.unit_of_measurement || '' : '');
+    const v = { cpu: g('cpu'), temp: g('temp'), mem: g('mem'), disk: g('disk'), load: g('load'), ni: g('net_in'), no: g('net_out') };
+    const ip = c.ip && h.states[c.ip] ? h.states[c.ip].state : '';
+    const bs = c.boot && h.states[c.boot] ? h.states[c.boot].state : null;
+    let up = '–'; if (bs && !isNaN(Date.parse(bs))) { const m = (Date.now() - Date.parse(bs)) / 60000, d = Math.floor(m / 1440), hh = Math.floor((m % 1440) / 60); up = d ? `${d} g ${hh} h` : `${hh} h ${Math.floor(m % 60)} min`; }
+    const key = JSON.stringify(v) + ip + up; if (key === this._key) return; this._key = key;
+    const online = v.cpu !== null;
+    const col = (x, w, a) => (x === null ? '#475569' : x >= a ? '#f87171' : x >= w ? '#fbbf24' : '#f5b544');
+    const bar = (lab, x, unit, w, a, max = 100, d = 0) => `<div class="row" data-e="${esc(c[{ CPU: 'cpu', Temperatura: 'temp', Memoria: 'mem', Disco: 'disk' }[lab]] || '')}"><div class="rl"><span>${lab}</span><b>${fmt(x, d)}${unit}</b></div>
+      <div class="trk"><div class="bf" style="width:${x === null ? 0 : Math.min(100, (x / max) * 100)}%;background:${col(x, w, a)}"></div></div></div>`;
+    const art = c.image ? `<div class="art"><img src="${esc(c.image)}" alt="" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))"></div>` : '';
+    this.shadowRoot.innerHTML = `<style>${DC_CSS}
+      .rows{display:grid;gap:11px;margin-top:16px}
+      .row{cursor:pointer} .rl{display:flex;justify-content:space-between;font-size:12px;color:var(--secondary-text-color);margin-bottom:5px} .rl b{color:var(--primary-text-color);font-weight:600;font-size:13px}
+      .trk{height:7px;border-radius:99px;background:rgba(148,163,184,.14);overflow:hidden} .bf{height:100%;border-radius:99px;transition:width .6s;box-shadow:0 0 10px rgba(245,181,68,.35)}
+      .foot{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+      .k{background:rgba(255,255,255,.04);border:1px solid rgba(148,163,184,.12);border-radius:10px;padding:8px 10px} .k span{display:block;font-size:11px;color:var(--secondary-text-color)} .k b{font-size:13px;color:var(--primary-text-color);font-weight:600;white-space:nowrap}
+    </style><ha-card><div class="top">${art}<div class="meta">
+      <div class="name">${esc(c.name || 'Server')}</div><div class="sub">${esc(c.subtitle || '')}${ip ? ` · ${esc(ip)}` : ''}</div>
+      <div class="pill ${online ? 'ok' : 'off'}"><span class="dot"></span>${online ? 'In funzione' : 'Non raggiungibile'}</div></div></div>
+      <div class="rows">${bar('CPU', v.cpu, '%', 60, 85)}${bar('Temperatura', v.temp, ' °C', 70, 85, 100)}${bar('Memoria', v.mem, '%', 75, 90)}${bar('Disco', v.disk, '%', 80, 92)}</div>
+      <div class="foot"><div class="k"><span>Acceso da</span><b>${up}</b></div><div class="k"><span>Carico 5 min</span><b>${fmt(v.load, 2)}</b></div>
+      <div class="k"><span>Rete ↓ / ↑</span><b>${fmt(v.ni, 1)} / ${fmt(v.no, 1)} ${esc(u('net_in'))}</b></div></div></ha-card>`;
+    this.shadowRoot.querySelectorAll('.row').forEach((el) => el.dataset.e && el.addEventListener('click', () => this.dispatchEvent(new CustomEvent('hass-more-info', { bubbles: true, composed: true, detail: { entityId: el.dataset.e } }))));
+  }
+}
+customElements.define('host-card', HostCard);
 window.customCards = window.customCards || [];
-window.customCards.push({ type: 'printer-card', name: 'Stampante', description: 'Stampante con cartucce' }, { type: 'net-card', name: 'Rete e internet', description: 'Connessione e velocità' });
+window.customCards.push({ type: 'printer-card', name: 'Stampante', description: 'Stampante con cartucce' }, { type: 'host-card', name: 'Computer / server', description: 'Risorse del computer' }, { type: 'net-card', name: 'Rete e internet', description: 'Connessione e velocità' });
