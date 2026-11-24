@@ -23,7 +23,7 @@ const INK = { black: '#2b2f36', grey: '#6b7280', 'blue-grey': '#4b5563', cyan: '
 // tachimetro: arco 240°, tacche, zona colorata e lancetta
 const TACHO_CSS = `.tc{position:relative;text-align:center;padding:8px 4px 6px;border-radius:16px;background:radial-gradient(circle at 50% 60%,rgba(255,255,255,.05),rgba(148,163,184,.04) 70%);border:1px solid rgba(148,163,184,.1);cursor:pointer}
   .tc svg{width:100%;max-width:150px;height:auto;display:block;margin:0 auto}
-  .tc .tv{position:absolute;left:0;right:0;top:52%;font-size:20px;font-weight:600;color:var(--primary-text-color);line-height:1} .tc .tv small{font-size:11px;color:var(--secondary-text-color);font-weight:500}
+  .tc .tv{position:absolute;left:0;right:0;top:66%;font-size:18px;font-weight:600;color:var(--primary-text-color);line-height:1} .tc .tv small{font-size:11px;color:var(--secondary-text-color);font-weight:500}
   .tc .tl{font-size:12px;color:var(--secondary-text-color);margin-top:-6px}
   .tc .nd{transition:transform .8s cubic-bezier(.3,1.4,.5,1)}`;
 const tacho = (v, max, col, warn, alarm) => {
