@@ -1,7 +1,7 @@
 // window-card · «finestra» per stanze senza finestre
 // Prato al vento disegnato in tempo reale (nessun video da scaricare) e suoni sintetizzati:
 // soffio di vento e fruscio dell'erba. La luce del cielo segue l'ora del giorno.
-// config: sound (true), volume (0..1, 0.35), wind (0..1, 0.5), sun_entity (sun.sun, facoltativo)
+// config: sound (true), volume (0..1, 0.35), wind (0..1, 0.5), sun_entity (sun.sun), preview_hour (ora fissa, solo per prove)
 class WindowCard extends HTMLElement {
   setConfig(c) {
     this._c = Object.assign({ sound: true, volume: 0.35, wind: 0.5, sun_entity: 'sun.sun' }, c || {});
@@ -51,8 +51,8 @@ class WindowCard extends HTMLElement {
   _sky() {
     // 0 notte · 1 giorno pieno, con tramonto caldo vicino all'orizzonte
     const sun = this._hass && this._hass.states[this._c.sun_entity];
-    let el = sun ? parseFloat(sun.attributes.elevation) : null;
-    if (el === null || isNaN(el)) { const hr = new Date().getHours() + new Date().getMinutes() / 60; el = 50 * Math.sin((hr - 6.5) / 13 * Math.PI); }
+    let el = (this._c.preview_hour == null && sun) ? parseFloat(sun.attributes.elevation) : null;
+    if (el === null || isNaN(el)) { const hr = this._c.preview_hour != null ? this._c.preview_hour : new Date().getHours() + new Date().getMinutes() / 60; el = 50 * Math.sin((hr - 6.5) / 13 * Math.PI); }
     const day = Math.max(0, Math.min(1, (el + 6) / 26));
     const warm = Math.max(0, 1 - Math.abs(el - 3) / 9);
     return { day, warm };
@@ -75,8 +75,12 @@ class WindowCard extends HTMLElement {
     const sg = g.createRadialGradient(sx, sy, 0, sx, sy, H * 0.45);
     sg.addColorStop(0, `rgba(255,${235 - warm * 50},${190 - warm * 80},${0.55 * Math.max(day, warm)})`); sg.addColorStop(1, 'rgba(255,220,170,0)');
     g.fillStyle = sg; g.fillRect(0, 0, W, H);
+    // stelle e luna quando è buio
+    if (day < 0.35) { const a = (0.35 - day) / 0.35; g.fillStyle = `rgba(255,255,255,${0.8 * a})`;
+      for (let i = 0; i < 90; i++) { const x = (Math.sin(i * 91.7) * 0.5 + 0.5) * W, y = (Math.sin(i * 47.3) * 0.5 + 0.5) * H * 0.5, tw = 0.5 + 0.5 * Math.sin(time * 1.3 + i); g.globalAlpha = a * (0.3 + 0.7 * tw); g.fillRect(x, y, 1.4, 1.4); }
+      g.globalAlpha = a; g.fillStyle = '#f4f1e6'; g.beginPath(); g.arc(W * 0.2, H * 0.16, H * 0.035, 0, 6.28); g.fill(); g.globalAlpha = 1; }
     // nuvole
-    g.fillStyle = `rgba(255,255,255,${0.18 + day * 0.45})`;
+    g.fillStyle = `rgba(${day > 0.3 ? '255,255,255' : '150,160,190'},${0.06 + day * 0.5})`;
     for (const c of this._clouds) {
       const x = ((c.x + time * c.v * (0.6 + this._c.wind)) % 1.3 - 0.15) * W, y = c.y * H, s = c.s * W;
       for (let i = 0; i < 5; i++) { g.beginPath(); g.ellipse(x + (i - 2) * s * 0.22, y + Math.sin(i * 1.7) * s * 0.05, s * 0.2, s * 0.08, 0, 0, 6.28); g.fill(); }
@@ -101,7 +105,7 @@ class WindowCard extends HTMLElement {
     const baseCol = [mix([20, 50, 22], [92, 168, 70], day), mix([26, 62, 26], [128, 196, 86], day), mix([14, 40, 18], [70, 140, 52], day)];
     for (const b of this._blades) {
       const L = b.layer, y0 = H * (0.66 + L * 0.1 + (b.tint - 0.5) * 0.04), x0 = b.x * W;
-      const len = b.h * H * (1 + L * 0.6);
+      const S = Math.min(H, W * 0.5625); const len = b.h * S * (1 + L * 0.6);
       const wave = Math.sin(time * 1.15 - b.x * 7 + L * 0.4) * 0.5 + Math.sin(time * 2.3 + b.ph) * 0.18;
       const bend = (0.25 + wind * 0.9) * gust * (0.6 + wave) * b.k;
       const tx = x0 + bend * len * 0.55, ty = y0 - len * (1 - 0.18 * bend * bend);
