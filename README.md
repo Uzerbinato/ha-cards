@@ -15,6 +15,7 @@ Contiene solo codice grafico: nessuna configurazione, nome di dispositivo o indi
 | `theme-notte.js` | tema scuro blu notte (variabili CSS), senza file di tema |
 | `theme-grafite.js` | tema scuro grafite con accento ambra |
 | `window-card.js` | «finestra»: prato al vento disegnato in tempo reale, luce che segue il sole, suoni di vento e fruscio sintetizzati |
+| `device-cards.js` | `printer-card` (stampante con cartucce), `net-card` (connessione e velocità) |
 
 ## Uso in Home Assistant
 
