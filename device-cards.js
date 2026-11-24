@@ -20,6 +20,27 @@ const num = (h, id) => { const s = id && h.states[id]; const v = s ? parseFloat(
 const fmt = (v, d = 0) => (v === null ? '–' : Number(v).toFixed(d).replace('.', ','));
 const INK = { black: '#2b2f36', grey: '#6b7280', 'blue-grey': '#4b5563', cyan: '#22d3ee', 'light-blue': '#7dd3fc', magenta: '#ec4899', pink: '#f472b6', yellow: '#facc15' };
 
+// tachimetro: arco 240°, tacche, zona colorata e lancetta
+const TACHO_CSS = `.tc{position:relative;text-align:center;padding:8px 4px 6px;border-radius:16px;background:radial-gradient(circle at 50% 60%,rgba(255,255,255,.05),rgba(148,163,184,.04) 70%);border:1px solid rgba(148,163,184,.1);cursor:pointer}
+  .tc svg{width:100%;max-width:150px;height:auto;display:block;margin:0 auto}
+  .tc .tv{position:absolute;left:0;right:0;top:52%;font-size:20px;font-weight:600;color:var(--primary-text-color);line-height:1} .tc .tv small{font-size:11px;color:var(--secondary-text-color);font-weight:500}
+  .tc .tl{font-size:12px;color:var(--secondary-text-color);margin-top:-6px}
+  .tc .nd{transition:transform .8s cubic-bezier(.3,1.4,.5,1)}`;
+const tacho = (v, max, col, warn, alarm) => {
+  const S = 150, E = 390, cx = 60, cy = 60, R = 46, k = v === null ? 0 : Math.max(0, Math.min(1, v / max));
+  const pt = (deg, r) => { const a = (deg * Math.PI) / 180; return [(cx + r * Math.cos(a)).toFixed(1), (cy + r * Math.sin(a)).toFixed(1)]; };
+  const arcP = (a0, a1, r) => { const [x0, y0] = pt(a0, r), [x1, y1] = pt(a1, r); return `M${x0} ${y0} A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1}`; };
+  let ticks = ''; for (let i = 0; i <= 20; i++) { const a = S + (E - S) * i / 20, big = i % 5 === 0, [x0, y0] = pt(a, R - 9), [x1, y1] = pt(a, R - (big ? 15 : 12)); ticks += `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="rgba(226,232,240,${big ? .55 : .25})" stroke-width="${big ? 1.6 : 1}"/>`; }
+  const zone = (f0, f1, c2) => `<path d="${arcP(S + (E - S) * f0, S + (E - S) * f1, R)}" stroke="${c2}" stroke-width="3" fill="none" opacity=".55"/>`;
+  const zones = warn != null ? zone(warn / max, (alarm ?? max) / max, '#fbbf24') + (alarm != null ? zone(alarm / max, 1, '#f87171') : '') : '';
+  const na = S + (E - S) * k, cc = v !== null && alarm != null && v >= alarm ? '#f87171' : v !== null && warn != null && v >= warn ? '#fbbf24' : col;
+  return `<svg viewBox="0 0 120 104"><path d="${arcP(S, E, R + 6)}" stroke="rgba(148,163,184,.16)" stroke-width="7" fill="none" stroke-linecap="round"/>
+    ${k > 0.005 ? `<path d="${arcP(S, na, R + 6)}" stroke="${cc}" stroke-width="7" fill="none" stroke-linecap="round" style="filter:drop-shadow(0 0 5px ${cc})"/>` : ''}
+    ${zones}${ticks}
+    <g class="nd" style="transform-origin:${cx}px ${cy}px;transform:rotate(${na - 270}deg)"><path d="M${cx - 2.2} ${cy} L${cx} ${cy - R + 12} L${cx + 2.2} ${cy} Z" fill="#e2e8f0"/></g>
+    <circle cx="${cx}" cy="${cy}" r="5" fill="#1f242b" stroke="${cc}" stroke-width="2"/></svg>`;
+};
+
 class PrinterCard extends HTMLElement {
   setConfig(c) { if (!c.entity) throw new Error('entity richiesta'); this._c = c; if (!this.shadowRoot) this.attachShadow({ mode: 'open' }); }
   getCardSize() { return 4; }
@@ -92,7 +113,7 @@ class NetCard extends HTMLElement {
     const flow = net ? 'flow' : '';
     this.shadowRoot.innerHTML = `<style>${DC_CSS}
       .art{width:150px;height:96px}
-      .g{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+      .g{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px} ${TACHO_CSS}
       .gauge{position:relative;text-align:center;padding:10px 6px 8px;border-radius:16px;background:rgba(148,163,184,.07)}
       .gauge svg{width:100%;max-width:150px;height:auto}
       .gv{position:absolute;left:0;right:0;top:42%;font-size:22px;font-weight:600;color:var(--primary-text-color)} .gv small{font-size:12px;color:var(--secondary-text-color);font-weight:500}
@@ -110,8 +131,8 @@ class NetCard extends HTMLElement {
         <path d="M122 14 a20 20 0 0 1 28 0 M127 19 a13 13 0 0 1 18 0" stroke="${rt ? '#38bdf8' : '#94a3b8'}" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`}
       </div><div class="meta"><div class="name">${esc(c.name || 'Rete e internet')}</div><div class="sub">${esc(c.subtitle || 'Fibra FTTC · router Be Byte')}</div>
       <div class="pill ${state[1]}"><span class="dot"></span>${state[0]}</div></div></div>
-      <div class="g"><div class="gauge">${arc(d, c.nominal_down, '#22d3ee')}<div class="gv">${fmt(d)}<small> Mbit/s</small></div><div class="gl">Download · su ${c.nominal_down}</div></div>
-        <div class="gauge">${arc(u, c.nominal_up, '#a78bfa')}<div class="gv">${fmt(u)}<small> Mbit/s</small></div><div class="gl">Upload · su ${c.nominal_up}</div></div></div>
+      <div class="g"><div class="tc">${tacho(d, c.nominal_down, '#22d3ee')}<div class="tv">${fmt(d)}<small> Mbit/s</small></div><div class="tl">Download · su ${c.nominal_down}</div></div>
+        <div class="tc">${tacho(u, c.nominal_up, '#a78bfa')}<div class="tv">${fmt(u)}<small> Mbit/s</small></div><div class="tl">Upload · su ${c.nominal_up}</div></div></div>
       <div class="row"><span>Latenza <b>${fmt(lat)} ms</b></span><span>Pacchetti persi <b>${fmt(loss)}%</b></span><span>Dispositivi Wi-Fi <b>${fmt(cl)}</b></span></div></ha-card>`;
   }
 }
@@ -136,7 +157,7 @@ class HostCard extends HTMLElement {
       <div class="trk"><div class="bf" style="width:${x === null ? 0 : Math.min(100, (x / max) * 100)}%;background:${col(x, w, a)}"></div></div></div>`;
     const art = c.image ? `<div class="art"><img src="${esc(c.image)}" alt="" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))"></div>` : '';
     this.shadowRoot.innerHTML = `<style>${DC_CSS}
-      .rows{display:grid;gap:11px;margin-top:16px}
+      .tg{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:16px} ${TACHO_CSS}
       .row{cursor:pointer} .rl{display:flex;justify-content:space-between;font-size:12px;color:var(--secondary-text-color);margin-bottom:5px} .rl b{color:var(--primary-text-color);font-weight:600;font-size:13px}
       .trk{height:7px;border-radius:99px;background:rgba(148,163,184,.14);overflow:hidden} .bf{height:100%;border-radius:99px;transition:width .6s;box-shadow:0 0 10px rgba(245,181,68,.35)}
       .foot{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
@@ -144,7 +165,7 @@ class HostCard extends HTMLElement {
     </style><ha-card><div class="top">${art}<div class="meta">
       <div class="name">${esc(c.name || 'Server')}</div><div class="sub">${esc(c.subtitle || '')}${ip ? ` · ${esc(ip)}` : ''}</div>
       <div class="pill ${online ? 'ok' : 'off'}"><span class="dot"></span>${online ? 'In funzione' : 'Non raggiungibile'}</div></div></div>
-      <div class="rows">${bar('CPU', v.cpu, '%', 60, 85)}${bar('Temperatura', v.temp, ' °C', 70, 85, 100)}${bar('Memoria', v.mem, '%', 75, 90)}${bar('Disco', v.disk, '%', 80, 92)}</div>
+      <div class="tg">${[['CPU','cpu',v.cpu,'%',100,60,85,0],['Temperatura','temp',v.temp,' °C',100,70,85,0],['Memoria','mem',v.mem,'%',100,75,90,0],['Disco','disk',v.disk,'%',100,80,92,0]].map(([l,k,x,un,mx,w,a]) => `<div class="tc row" data-e="${esc(c[k] || '')}">${tacho(x, mx, '#f5b544', w, a)}<div class="tv">${fmt(x)}<small>${un}</small></div><div class="tl">${l}</div></div>`).join('')}</div>
       <div class="foot"><div class="k"><span>Acceso da</span><b>${up}</b></div><div class="k"><span>Carico 5 min</span><b>${fmt(v.load, 2)}</b></div>
       <div class="k"><span>Rete ↓ / ↑</span><b>${fmt(v.ni, 1)} / ${fmt(v.no, 1)} ${esc(u('net_in'))}</b></div></div></ha-card>`;
     this.shadowRoot.querySelectorAll('.row').forEach((el) => el.dataset.e && el.addEventListener('click', () => this.dispatchEvent(new CustomEvent('hass-more-info', { bubbles: true, composed: true, detail: { entityId: el.dataset.e } }))));
