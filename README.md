@@ -12,6 +12,7 @@ Contiene solo codice grafico: nessuna configurazione, nome di dispositivo o indi
 | `home-cards2.js` | `kpi-card`, `heatpump-card`, `lights-card`, `media-card`, `vacuum-card`, `camera-strip-card` |
 | `home-cards3.js` | `receiver-card` – sintoamplificatore |
 | `home-cards4.js` | `lights-zone-card`, `security-card` |
+| `theme-notte.js` | tema scuro blu notte (variabili CSS), senza file di tema |
 
 ## Uso in Home Assistant
 
