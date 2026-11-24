@@ -1,13 +1,13 @@
 // device-cards · card grafiche per periferiche
 // printer-card: illustrazione della stampante, stato e cartucce con il livello d'inchiostro
-//   config: entity (stato IPP), name, model ('mfp' | 'plotter'), inks: [{entity, name, color}]
+//   config: entity (stato IPP), name, model ('mfp' | 'plotter'), image (URL foto, facoltativa), inks: [{entity, name, color}]
 // net-card: connessione internet e rete locale con illustrazione di router e access point
-//   config: internet, router, download, upload, latency, loss, nominal_down (Mbit/s), nominal_up, clients: [entity...]
+//   config: image (URL foto, facoltativa), internet, router, download, upload, latency, loss, nominal_down (Mbit/s), nominal_up, clients: [entity...]
 const DC_CSS = `
   :host{display:block}
   ha-card{overflow:hidden;padding:16px 18px 18px;background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,0) 40%),var(--ha-card-background,var(--card-background-color));}
   .top{display:flex;gap:16px;align-items:center}
-  .art{flex:0 0 auto;width:118px;height:96px}
+  .art{flex:0 0 auto;width:132px;height:104px}
   .meta{min-width:0;flex:1}
   .name{font-size:16px;font-weight:600;color:var(--primary-text-color);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sub{font-size:13px;color:var(--secondary-text-color);margin-top:2px}
@@ -32,7 +32,7 @@ class PrinterCard extends HTMLElement {
     const low = inks.filter((k) => k.v !== null && k.v < 15);
     const key = st + inks.map((k) => k.v).join(',');
     if (key === this._key) return; this._key = key;
-    const art = c.model === 'plotter' ? this._plotter(st) : this._mfp(st);
+    const art = c.image ? `<img src="${esc(c.image)}" alt="" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))">` : (c.model === 'plotter' ? this._plotter(st) : this._mfp(st));
     this.shadowRoot.innerHTML = `<style>${DC_CSS}
       .inks{display:grid;grid-template-columns:repeat(${Math.max(4, inks.length)},1fr);gap:10px;margin-top:16px}
       .ink{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
@@ -100,14 +100,14 @@ class NetCard extends HTMLElement {
       .row{display:flex;justify-content:space-between;gap:10px;margin-top:12px;font-size:13px;color:var(--secondary-text-color)}
       .row b{color:var(--primary-text-color);font-weight:600}
       .flow{stroke-dasharray:4 6;animation:f 1.2s linear infinite} @keyframes f{to{stroke-dashoffset:-20}}
-    </style><ha-card><div class="top"><div class="art">
+    </style><ha-card><div class="top"><div class="art">${c.image ? `<img src="${esc(c.image)}" alt="" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))">` : `
       <svg viewBox="0 0 150 96"><path class="${flow}" d="M24 30 C50 30 52 58 74 58" stroke="${net ? '#38bdf8' : '#f87171'}" stroke-width="2.5" fill="none"/>
         <path class="${rt ? 'flow' : ''}" d="M100 58 C118 58 120 34 132 34" stroke="${rt ? '#34d399' : '#f87171'}" stroke-width="2.5" fill="none"/>
         <circle cx="18" cy="28" r="14" fill="rgba(56,189,248,.14)" stroke="${net ? '#38bdf8' : '#f87171'}" stroke-width="2"/><path d="M8 28h20M18 14c-6 8-6 20 0 28M18 14c6 8 6 20 0 28" stroke="${net ? '#7dd3fc' : '#fca5a5'}" stroke-width="1.6" fill="none"/>
         <rect x="64" y="50" width="44" height="18" rx="4" fill="#2b3037" stroke="rgba(255,255,255,.15)"/><circle cx="72" cy="59" r="2" fill="${rt ? '#34d399' : '#f87171'}"/><circle cx="79" cy="59" r="2" fill="${net ? '#34d399' : '#f87171'}"/>
         <path d="M74 50 v-12 M98 50 v-12" stroke="#4b5563" stroke-width="2.4" stroke-linecap="round"/>
         <ellipse cx="136" cy="30" rx="12" ry="12" fill="#e8ecf1"/><circle cx="136" cy="30" r="4" fill="${rt ? '#38bdf8' : '#94a3b8'}"/>
-        <path d="M122 14 a20 20 0 0 1 28 0 M127 19 a13 13 0 0 1 18 0" stroke="${rt ? '#38bdf8' : '#94a3b8'}" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        <path d="M122 14 a20 20 0 0 1 28 0 M127 19 a13 13 0 0 1 18 0" stroke="${rt ? '#38bdf8' : '#94a3b8'}" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`}
       </div><div class="meta"><div class="name">${esc(c.name || 'Rete e internet')}</div><div class="sub">${esc(c.subtitle || 'Fibra FTTC · router Be Byte')}</div>
       <div class="pill ${state[1]}"><span class="dot"></span>${state[0]}</div></div></div>
       <div class="g"><div class="gauge">${arc(d, c.nominal_down, '#22d3ee')}<div class="gv">${fmt(d)}<small> Mbit/s</small></div><div class="gl">Download · su ${c.nominal_down}</div></div>
