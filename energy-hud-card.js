@@ -9,7 +9,7 @@ ha-card{background:radial-gradient(120% 90% at 50% 0%,#18242b 0%,#0d1317 62%,#0a
 .live{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:1.6px;color:#7cffb2;text-transform:uppercase}
 .live i{width:6px;height:6px;border-radius:50%;background:#7cffb2;box-shadow:0 0 8px #7cffb2;animation:pulse 1.6s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 14px 2px;position:relative}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;padding:12px 14px 2px;position:relative}
 .st{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:8px 10px;cursor:pointer}
 .st .k{font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;color:#7f939c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st .v{font-family:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;font-size:17px;font-weight:600;margin-top:2px;white-space:nowrap}
@@ -146,13 +146,13 @@ ${flow('M228 72 C282 76 320 100 326 128', s2g, C.exp)}
 ${flow('M106 168 L158 168', b2h, C.bat)}
 ${flow('M294 168 L242 168', g2h, C.imp)}
 ${flow('M188 208 C178 228 150 236 140 248', pdc, C.hp)}
-${flow('M212 208 C222 228 250 236 260 248', ev || 0, C.ev)}
+${c.ev ? flow('M212 208 C222 228 250 236 260 248', ev || 0, C.ev) : ''}
 ${node(c.solar, 200, 64, 30, C.pv, I.sun, pv, 'Fotovoltaico', `${Math.round(pv / c.pv_peak * 100)}% picco`, pv / c.pv_peak, true)}
 ${node(c.battery_soc || c.battery, 70, 168, 30, C.bat, I.bat, bat === 0 ? 0 : bat, 'Batterie', soc === null ? '' : `${Math.round(soc)}% · ${bat > 0.02 ? 'carica' : bat < -0.02 ? 'scarica' : 'riposo'}`, soc === null ? 0 : soc / 100, false, soc === null ? undefined : soc / 100)}
 ${node(c.grid_import, 330, 168, 30, imp > 0.02 ? C.imp : C.exp, I.grid, gridKw, 'Rete', imp > 0.02 ? 'prelievo' : exp > 0.02 ? 'immissione' : 'in equilibrio')}
 ${node(c.home, 200, 168, 38, '#CFE3EA', I.home, home, 'Casa', `autonomia ${Math.round(self)}%`, self / 100)}
 ${node(c.heat_pump, 128, 270, 22, C.hp, I.hp, pdc, 'Pompa di calore', '')}
-${node(c.ev, 272, 270, 22, C.ev, I.ev, ev === null && evSoc !== null ? 0 : ev, 'Auto', evSoc !== null ? Math.round(evSoc) + '%' + (ev > 0.02 ? ' · ricarica' : '') : ev === null ? 'non collegata' : '', evSoc !== null ? evSoc / 100 : undefined)}
+${c.ev ? node(c.ev, 272, 270, 22, C.ev, I.ev, ev === null && evSoc !== null ? 0 : ev, 'Auto', evSoc !== null ? Math.round(evSoc) + '%' + (ev > 0.02 ? ' · ricarica' : '') : ev === null ? 'non collegata' : '', evSoc !== null ? evSoc / 100 : undefined) : ''}
 </svg>`;
 const pct = fc ? Math.min(100, pvToday / fc * 100) : 0;
 const st = (k, v, u, id, bar, col) => `<div class="st" data-e="${id || ''}"><div class="k">${k}</div><div class="v">${v}<small>${u}</small></div>${bar !== undefined ? `<div class="bar"><b style="width:${bar}%;background:${col};box-shadow:0 0 8px ${col}"></b></div>` : ''}</div>`;
@@ -160,9 +160,9 @@ const html = `<ha-card><div class="grid"></div>
 <div class="hdr"><div class="ttl">${c.title}</div><div class="live"><i></i>live</div></div>
 <div class="stats">
 ${st('Prodotta oggi', pvToday.toFixed(1).replace('.', ','), 'kWh', (c.solar_today || [])[0], pct, C.pv)}
-${st('Previsione', fc === null ? '—' : fc.toFixed(0), 'kWh', c.forecast_today, fc ? Math.min(100, (fc - (fcRem || 0)) / fc * 100) : 0, '#ffe08a')}
+${c.forecast_today ? st('Previsione', fc === null ? '—' : fc.toFixed(0), 'kWh', c.forecast_today, fc ? Math.min(100, (fc - (fcRem || 0)) / fc * 100) : 0, '#ffe08a') : ''}
 ${st('Autonomia', Math.round(self), '%', c.home, self, C.bat)}
-${st('Fascia', fascia, '', c.tariff)}
+${c.tariff ? st('Fascia', fascia, '', c.tariff) : ''}
 </div>${svg}</ha-card>`;
 if (this._last === html) return;
 this._last = html;
