@@ -77,7 +77,10 @@
     nz = Math.max(0.35, Math.round(nz * 1000) / 1000);
     if (Math.abs(nz - z) > 0.015) { z = nz; st.textContent = 'html{zoom:' + z + '}'; }
   };
-  setInterval(fit, 3000);
+  // regola la scala solo per 12 s dopo l'apertura o il cambio pagina, poi la congela (niente oscillazioni)
+  let fitUntil = Date.now() + 12000;
+  window.addEventListener('location-changed', () => { fitUntil = Date.now() + 12000; });
+  setInterval(() => { if (Date.now() < fitUntil) fit(); }, 1200);
   // testi piccoli più leggibili da lontano: ingrandisce del 22% i testi HTML sotto i 15 px (non gli SVG)
   const seen = new WeakSet();
   const boost = (root) => {
