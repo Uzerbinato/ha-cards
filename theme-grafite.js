@@ -100,3 +100,54 @@
   };
   setInterval(() => { boost(document); watch(document); document.querySelectorAll('*').forEach((el) => el.shadowRoot && watch(el.shadowRoot)); }, 4000);
 })();
+
+
+// Schermo TV: più pagine navigabili con le frecce del telecomando, con transizioni e indicatore
+(() => {
+  if (!/CrKey|Cast/i.test(navigator.userAgent) && !/[?&]tv=1/.test(location.search)) return;
+  const PAGES = [['tv', 'Ufficio'], ['tv-energia', 'Energia'], ['tv-clima', 'Clima'], ['tv-camere', 'Telecamere']];
+  const base = () => location.pathname.split('/').slice(0, 2).join('/');
+  const cur = () => Math.max(0, PAGES.findIndex(([p]) => location.pathname.endsWith('/' + p)));
+  const css = document.createElement('style');
+  css.textContent = `
+    #tvdots{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:99999;display:flex;gap:14px;align-items:center;padding:8px 18px;border-radius:999px;background:rgba(10,14,18,.55);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);font:600 13px/1 system-ui,sans-serif;color:#cbd5e1;opacity:0;transition:opacity .6s}
+    #tvdots.show{opacity:1}
+    #tvdots i{width:9px;height:9px;border-radius:50%;background:rgba(203,213,225,.3);transition:all .4s}
+    #tvdots i.on{width:28px;border-radius:6px;background:linear-gradient(90deg,#f5b544,#fde68a);box-shadow:0 0 12px rgba(245,181,68,.7)}
+    #tvdots span{margin-left:6px;letter-spacing:.12em;text-transform:uppercase;color:#f5b544}
+    #tvfx{position:fixed;inset:0;z-index:99998;pointer-events:none;opacity:0;background:radial-gradient(circle at var(--x,50%) 50%,rgba(245,181,68,.35),rgba(8,10,14,.96) 45%,#05070a 80%)}
+    #tvfx.go{animation:tvfx .9s cubic-bezier(.6,.05,.3,1)}
+    @keyframes tvfx{0%{opacity:0;clip-path:circle(0% at var(--x,50%) 50%)}45%{opacity:1;clip-path:circle(150% at var(--x,50%) 50%)}100%{opacity:0;clip-path:circle(150% at var(--x,50%) 50%)}}
+    home-assistant.tvin{animation:tvin .9s cubic-bezier(.2,.8,.2,1)}
+    @keyframes tvin{0%{filter:blur(14px) brightness(.4);transform:translateX(var(--dx,0)) scale(.96)}100%{filter:none;transform:none}}`;
+  document.head.appendChild(css);
+  const dots = document.createElement('div'); dots.id = 'tvdots';
+  const fx = document.createElement('div'); fx.id = 'tvfx';
+  const mount = () => { if (!document.body) return setTimeout(mount, 300); document.body.append(dots, fx); paint(false); };
+  let hideT;
+  const paint = (show) => {
+    const i = cur();
+    dots.innerHTML = PAGES.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('') + `<span>${PAGES[i][1]}</span>`;
+    if (show) { dots.classList.add('show'); clearTimeout(hideT); hideT = setTimeout(() => dots.classList.remove('show'), 3500); }
+  };
+  const go = (dir) => {
+    const i = (cur() + dir + PAGES.length) % PAGES.length;
+    fx.style.setProperty('--x', dir > 0 ? '100%' : '0%');
+    fx.classList.remove('go'); void fx.offsetWidth; fx.classList.add('go');
+    setTimeout(() => {
+      history.pushState(null, '', base() + '/' + PAGES[i][0] + location.search);
+      window.dispatchEvent(new CustomEvent('location-changed', { detail: { replace: false } }));
+      const ha = document.querySelector('home-assistant');
+      if (ha) { ha.style.setProperty('--dx', (dir > 0 ? 40 : -40) + 'px'); ha.classList.remove('tvin'); void ha.offsetWidth; ha.classList.add('tvin'); }
+      paint(true);
+    }, 380);
+  };
+  let idle;
+  const arm = () => { clearTimeout(idle); idle = setTimeout(() => { if (cur() !== 0) go(-cur()); }, 4 * 60 * 1000); };
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.keyCode === 22) { e.preventDefault(); e.stopPropagation(); go(1); arm(); }
+    else if (e.key === 'ArrowLeft' || e.keyCode === 21) { e.preventDefault(); e.stopPropagation(); go(-1); arm(); }
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Enter') { paint(true); arm(); }
+  }, true);
+  mount();
+})();
