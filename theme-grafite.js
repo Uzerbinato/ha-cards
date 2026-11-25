@@ -68,8 +68,10 @@
   // adatta la scala perché tutta la pagina stia nello schermo, senza scorrere
   let z = 0.62;
   const fit = () => {
-    const se = document.scrollingElement || document.documentElement;
-    const r = se.scrollHeight / Math.max(1, se.clientHeight);
+    const find = (n, tg) => { if (!n) return null; if (n.tagName === tg) return n; for (const ch of [...(n.shadowRoot ? n.shadowRoot.children : []), ...(n.children || [])]) { const r = find(ch, tg); if (r) return r; } return null; };
+    const v = find(document.querySelector('home-assistant'), 'HUI-SECTIONS-VIEW'); const ct = v && v.shadowRoot && v.shadowRoot.querySelector('.container');
+    if (!ct) return;
+    const r = (ct.getBoundingClientRect().bottom + 12) / Math.max(1, window.innerHeight);
     let nz = z;
     if (r > 1.01) nz = z / r * 0.99; else if (r < 0.98 && z < 1) nz = Math.min(1, z / r * 0.99);
     nz = Math.max(0.35, Math.round(nz * 1000) / 1000);
