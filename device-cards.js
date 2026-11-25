@@ -1,6 +1,6 @@
 // device-cards · card grafiche per periferiche
 // printer-card: illustrazione della stampante, stato e cartucce con il livello d'inchiostro
-//   config: entity (stato IPP), name, model ('mfp' | 'plotter'), image (URL foto, facoltativa), inks: [{entity, name, color}]
+//   config: entity (stato IPP), name, model ('mfp' | 'plotter'), image (URL foto, facoltativa), compact (foto accanto alle cartucce), inks: [{entity, name, color}]
 // net-card: connessione internet e rete locale con illustrazione di router e access point
 //   config: image (URL foto, facoltativa), internet, router, download, upload, latency, loss, nominal_down (Mbit/s), nominal_up, clients: [entity...]
 const DC_CSS = `
@@ -64,13 +64,18 @@ class PrinterCard extends HTMLElement {
       .pct{font-size:13px;font-weight:600;color:var(--primary-text-color)} .pct.low{color:#fb923c}
       .iname{font-size:11px;color:var(--secondary-text-color);text-align:center;line-height:1.2}
       .warn{margin-top:12px;font-size:12px;color:#fb923c}
-    </style><ha-card><div class="top"><div class="art">${art}</div><div class="meta">
+      .cmp{display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center}
+      .cmp .art{width:110px;height:96px}
+      .cmp .hd{display:flex;align-items:center;gap:10px;min-width:0}.cmp .hd .name{flex:1;min-width:0}.cmp .pill{margin-top:0}
+      .cmp .inks{margin-top:10px;gap:8px}.cmp .cart{height:44px;max-width:30px}
+    </style><ha-card>${c.compact ? `<div class="cmp"><div class="art">${art}</div><div style="min-width:0">
+      <div class="hd"><div class="name">${esc(c.name || (s && s.attributes.friendly_name) || c.entity)}</div><div class="pill ${lab[1]}"><span class="dot"></span>${esc(lab[0])}</div></div>` : `<div class="top"><div class="art">${art}</div><div class="meta">
       <div class="name">${esc(c.name || (s && s.attributes.friendly_name) || c.entity)}</div>
       <div class="sub">${esc(c.subtitle || (c.model === 'plotter' ? 'Plotter grande formato' : 'Multifunzione a colori'))}</div>
-      <div class="pill ${lab[1]}"><span class="dot"></span>${esc(lab[0])}</div></div></div>
+      <div class="pill ${lab[1]}"><span class="dot"></span>${esc(lab[0])}</div></div></div>`}
       <div class="inks">${inks.map((k) => `<div class="ink" data-e="${esc(k.entity)}"><div class="cart"><div class="fill" style="height:${k.v === null ? 0 : Math.max(3, k.v)}%;background:${INK[k.color] || k.color || '#888'}"></div></div>
         <div class="pct ${k.v !== null && k.v < 15 ? 'low' : ''}">${fmt(k.v)}%</div><div class="iname">${esc(k.name)}</div></div>`).join('')}</div>
-      ${low.length ? `<div class="warn">Da sostituire presto: ${low.map((k) => esc(k.name)).join(', ')}</div>` : ''}</ha-card>`;
+      ${low.length ? `<div class="warn">Da sostituire presto: ${low.map((k) => esc(k.name)).join(', ')}</div>` : ''}${c.compact ? '</div></div>' : ''}</ha-card>`;
     this.shadowRoot.querySelectorAll('.ink').forEach((el) => el.addEventListener('click', () => this.dispatchEvent(new CustomEvent('hass-more-info', { bubbles: true, composed: true, detail: { entityId: el.dataset.e } }))));
   }
   _mfp(st) {
