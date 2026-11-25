@@ -54,6 +54,8 @@ class PrinterCard extends HTMLElement {
     const rs = String((s && s.attributes.state_reason) || '').toLowerCase();
     const RS = [['media-empty', 'Carta esaurita'], ['media-needed', 'Carta esaurita'], ['media-jam', 'Carta inceppata'], ['media-low', 'Carta in esaurimento'], ['door-open', 'Sportello aperto'], ['cover-open', 'Coperchio aperto'], ['toner-empty', 'Toner esaurito'], ['marker-supply-empty', 'Inchiostro esaurito'], ['offline', 'Offline']];
     const rmsg = (RS.find(([k]) => rs.includes(k)) || [])[1] || '';
+    const paper = rs.includes('media-empty') || rs.includes('media-needed') ? ['Carta esaurita', 'bad'] : rs.includes('media-jam') ? ['Carta inceppata', 'bad'] : rs.includes('media-low') ? ['Carta in esaurimento', 'busy'] : st === 'unavailable' ? ['Carta ?', 'off'] : ['Carta OK', 'ok'];
+    const ppill = `<div class="pill ${paper[1]}" style="margin-left:6px"><ha-icon icon="mdi:file-outline" style="--mdc-icon-size:13px"></ha-icon>${paper[0]}</div>`;
     const key = st + rs + inks.map((k) => k.v).join(',');
     if (key === this._key) return; this._key = key;
     const art = c.image ? `<img src="${esc(c.image)}" alt="" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))">` : (c.model === 'plotter' ? this._plotter(st) : this._mfp(st));
@@ -72,13 +74,13 @@ class PrinterCard extends HTMLElement {
       .cmp .hd{display:flex;align-items:center;gap:10px;min-width:0}.cmp .hd .name{flex:1;min-width:0}.cmp .pill{margin-top:0}
       .cmp .inks{margin-top:10px;gap:8px}.cmp .cart{height:44px;max-width:30px}
     </style><ha-card>${c.compact ? `<div class="cmp" style="grid-template-columns:${inks.length > 4 ? 84 : 110}px 1fr"><div class="art" style="width:${inks.length > 4 ? 84 : 110}px">${art}</div><div style="min-width:0">
-      <div class="hd"><div class="name">${esc(c.name || (s && s.attributes.friendly_name) || c.entity)}</div><div class="pill ${lab[1]}"><span class="dot"></span>${esc(lab[0])}</div></div>` : `<div class="top"><div class="art">${art}</div><div class="meta">
+      <div class="hd"><div class="name">${esc(c.name || (s && s.attributes.friendly_name) || c.entity)}</div><div class="pill ${lab[1]}"><span class="dot"></span>${esc(lab[0])}</div>${ppill}</div>` : `<div class="top"><div class="art">${art}</div><div class="meta">
       <div class="name">${esc(c.name || (s && s.attributes.friendly_name) || c.entity)}</div>
       <div class="sub">${esc(c.subtitle || (c.model === 'plotter' ? 'Plotter grande formato' : 'Multifunzione a colori'))}</div>
-      <div class="pill ${lab[1]}"><span class="dot"></span>${esc(lab[0])}</div></div></div>`}
+      <div class="pill ${lab[1]}"><span class="dot"></span>${esc(lab[0])}</div>${ppill}</div></div>`}
       <div class="inks">${inks.map((k) => `<div class="ink" data-e="${esc(k.entity)}"><div class="cart"><div class="fill" style="height:${k.v === null ? 0 : Math.max(3, k.v)}%;background:${INK[k.color] || k.color || '#888'}"></div></div>
         <div class="pct ${k.v !== null && k.v < 15 ? 'low' : ''}">${fmt(k.v)}%</div><div class="iname">${esc(k.name)}</div></div>`).join('')}</div>
-      ${rmsg ? `<div class="warn" style="color:#f87171;font-weight:600;font-size:13px">\u26A0 ${esc(rmsg)}</div>` : ''}${low.length ? `<div class="warn">Da sostituire presto: ${low.map((k) => esc(k.name)).join(', ')}</div>` : ''}${c.compact ? '</div></div>' : ''}</ha-card>`;
+       ${rmsg && !/Carta/.test(rmsg) ? `<div class="warn" style="color:#f87171;font-weight:600;font-size:13px">\u26A0 ${esc(rmsg)}</div>` : ''}${low.length ? `<div class="warn">Da sostituire presto: ${low.map((k) => esc(k.name)).join(', ')}</div>` : ''}${c.compact ? '</div></div>' : ''}</ha-card>`;
     this.shadowRoot.querySelectorAll('.ink').forEach((el) => el.addEventListener('click', () => this.dispatchEvent(new CustomEvent('hass-more-info', { bubbles: true, composed: true, detail: { entityId: el.dataset.e } }))));
   }
   _mfp(st) {
