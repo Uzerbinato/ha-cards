@@ -99,11 +99,23 @@ class MeteoHeroCard extends HTMLElement {
     const _su = (this._hass.states[c.solar] || {attributes:{}}).attributes.unit_of_measurement;
     let solar = this._num(c.solar, 1); const _sv = c.solar && this._hass.states[c.solar] ? parseFloat(this._hass.states[c.solar].state) : NaN; if (solar != null && _su === 'W') solar = _sv >= 1000 ? (_sv / 1000).toFixed(1).replace('.', ',') + ' kW' : Math.round(_sv) + ' W'; else if (solar != null) solar = solar + ' kW';
     const batt = this._num(c.battery, 0);
+    let meter = '';
+    if (c.meter && c.meter.entity) { const m = Object.assign({ max: 8, warn: 6, alarm: 6.6 }, c.meter); const ms = this._hass.states[m.entity]; let v = ms ? parseFloat(ms.state) : NaN; if (!isNaN(v) && ms.attributes.unit_of_measurement === 'W') v /= 1000;
+      const k = isNaN(v) ? 0 : Math.max(0, Math.min(1, v / m.max)), S = 150, E = 390, cx = 60, cy = 60, R = 46;
+      const pt = (d, r) => { const a = d * Math.PI / 180; return [(cx + r * Math.cos(a)).toFixed(1), (cy + r * Math.sin(a)).toFixed(1)]; };
+      const arc = (a0, a1, r) => { const [x0, y0] = pt(a0, r), [x1, y1] = pt(a1, r); return `M${x0} ${y0} A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1}`; };
+      const na = S + (E - S) * k, col = v >= m.alarm ? '#f87171' : v >= m.warn ? '#fbbf24' : '#22d3ee';
+      let tk = ''; for (let i = 0; i <= m.max; i++) { const a = S + (E - S) * i / m.max, [x0, y0] = pt(a, R - 9), [x1, y1] = pt(a, R - 15); tk += `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="rgba(226,232,240,.5)" stroke-width="1.4"/>`; }
+      meter = `<div class="mtr ${v >= m.alarm ? 'al' : ''}" data-e="${m.entity}"><svg viewBox="0 0 120 104"><path d="${arc(S, E, R + 6)}" stroke="rgba(148,163,184,.16)" stroke-width="7" fill="none" stroke-linecap="round"/>
+        ${k > 0.005 ? `<path d="${arc(S, na, R + 6)}" stroke="${col}" stroke-width="7" fill="none" stroke-linecap="round"/>` : ''}
+        <path d="${arc(S + (E - S) * m.warn / m.max, S + (E - S) * m.alarm / m.max, R)}" stroke="#fbbf24" stroke-width="3" fill="none" opacity=".6"/><path d="${arc(S + (E - S) * m.alarm / m.max, E, R)}" stroke="#f87171" stroke-width="3" fill="none" opacity=".6"/>${tk}
+        <g style="transform-origin:${cx}px ${cy}px;transform:rotate(${na - 270}deg);transition:transform .8s"><path d="M${cx - 2.2} ${cy} L${cx} ${cy - R + 12} L${cx + 2.2} ${cy} Z" fill="#e2e8f0"/></g><circle cx="${cx}" cy="${cy}" r="5" fill="#1f242b" stroke="${col}" stroke-width="2"/></svg>
+        <div class="mv">${isNaN(v) ? '–' : v.toFixed(1).replace('.', ',')}<small> kW</small></div><div class="ml">${m.name || 'Contatore'} · ${String(m.warn).replace('.', ',')} kW</div></div>`; }
     const fmtS = (st) => { try { return this._hass.formatEntityState ? this._hass.formatEntityState(st) : st.state; } catch (e) { return st.state; } };
     const status = (c.status || []).map(x => { const st = this._hass.states[x.entity]; if (!st) return ''; return `<div class="stx" data-e="${x.entity}"><ha-icon icon="${x.icon || st.attributes.icon || 'mdi:circle-small'}"></ha-icon><span>${x.name || st.attributes.friendly_name}</span><b>${fmtS(st)}</b></div>`; }).join('');
     const rooms = (c.rooms || []).map(r => { const st = this._hass.states[r.entity]; const a = st ? st.attributes : {}; const t = r.temperature ? parseFloat((this._hass.states[r.temperature] || {}).state) : a.current_temperature; const hu = a.current_humidity; const act = a.hvac_action;
       return `<div class="rm ${act === 'heating' ? 'heat' : act === 'cooling' ? 'cool' : ''}" data-e="${r.entity}"><span>${r.name || a.friendly_name || ''}</span><b>${t == null || isNaN(t) ? '–' : Number(t).toFixed(1).replace('.', ',')}\u00B0</b>${hu != null ? `<i>${Math.round(hu)}%</i>` : ''}</div>`; }).join('');
-    const key = [status, rooms, saluto, ora, data, cond, temp, minmax, next, solar, batt].join('|');
+    const key = [meter, status, rooms, saluto, ora, data, cond, temp, minmax, next, solar, batt].join('|');
     if (!force && key === this._key) return;
     this._key = key;
     this.shadowRoot.innerHTML = `<style>
@@ -148,10 +160,13 @@ class MeteoHeroCard extends HTMLElement {
       .rm span{grid-column:1/3;font-size:.7em;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .rm b{font-size:1.55em;font-weight:300;color:#e6edf7}.rm i{font-style:normal;font-size:.78em;color:#7fa8c0}
       .rm.heat{border-color:rgba(255,152,64,.45)}.rm.cool{border-color:rgba(100,180,255,.45)}
+      .mtr{position:relative;width:118px;text-align:center;cursor:pointer;flex:none}.mtr svg{width:100%;display:block}
+      .mtr .mv{position:absolute;left:0;right:0;top:58px;font-size:1.05em;font-weight:600;color:#e6edf7}.mtr .mv small{font-size:.7em;color:#94a3b8}
+      .mtr .ml{font-size:.68em;color:#94a3b8;margin-top:-6px;letter-spacing:.04em}.mtr.al{animation:pl 1.2s infinite}@keyframes pl{50%{opacity:.55}}
       .stl{display:grid;grid-template-columns:repeat(2,minmax(150px,1fr));gap:5px 8px;margin-left:8px;align-self:center}
       .stx{display:grid;grid-template-columns:20px 1fr auto;align-items:center;gap:6px;background:rgba(30,41,59,.45);border:1px solid rgba(148,163,184,.12);border-radius:10px;padding:4px 10px;cursor:pointer;font-size:.8em;white-space:nowrap}
       .stx ha-icon{--mdc-icon-size:16px;color:#f5b544}.stx span{color:#94a3b8;overflow:hidden;text-overflow:ellipsis}.stx b{color:#e6edf7;font-weight:600}
-      @media (max-width:700px){.rooms,.stl{display:none}}
+      @media (max-width:700px){.rooms,.stl,.mtr{display:none}}
       @media (max-width:700px){.wrap{display:grid;grid-template-columns:1fr auto;align-items:start;gap:8px}.l h1{font-size:1.6em}.clock{font-size:2.6em;margin:4px 0 0}.r{width:auto;flex-direction:column;align-items:flex-end;gap:2px}.days{display:none}.ico{width:64px;height:58px}.t{font-size:2.2em}.chips{margin-top:8px}}
       @media (prefers-reduced-motion:reduce){*{animation:none!important}}
     </style>
@@ -170,6 +185,7 @@ class MeteoHeroCard extends HTMLElement {
         <div class="now"><div class="t">${temp}\u00B0</div><div class="cond">${IT_COND[cond] || cond}</div><div class="mm">${minmax}</div></div>
         <div class="days">${next}</div>
       </div>
+      ${meter}
       ${rooms ? `<div class="rooms">${rooms}</div>` : ''}
       ${status ? `<div class="stl">${status}</div>` : ''}
     </div>`;
