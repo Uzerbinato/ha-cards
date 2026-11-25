@@ -115,9 +115,11 @@ return `<g class="node" data-e="${id || ''}">
 <circle cx="${cx}" cy="${cy}" r="${r}" fill="#0f171b" stroke="${active ? col : 'rgba(160,190,210,.25)'}" stroke-width="1.2"/>
 ${liquid !== undefined ? lq(cx, cy, r, liquid, col) : ''}
 ${frac !== undefined ? ring(cx, cy, r + 5, frac, col) : ''}
-<path d="${icon}" transform="translate(${cx - (small ? 6.6 : 9)} ${cy - r * (small ? 0.78 : 0.62)}) scale(${small ? .55 : .75})" fill="${active ? col : '#6b7f89'}"/>
-<text x="${cx}" y="${cy + r * (small ? 0.45 : 0.28)}" text-anchor="middle" class="num" font-size="${r > 34 ? 15 : small ? 10 : 12}" fill="${active ? '#eef3f5' : '#7f939c'}">${v}<tspan font-size="${small ? 6.5 : 8}" fill="#8fa3ad" dx="1.5">${u}</tspan></text>
-${!small ? `<text x="${cx}" y="${cy + r * 0.62}" text-anchor="middle" font-size="7.5" fill="${col}" opacity=".85">${sub || ''}</text>` : ''}
+${this._c.no_icons ? '' : `<path d="${icon}" transform="translate(${cx - (small ? 6.6 : 9)} ${cy - r * (small ? 0.78 : 0.62)}) scale(${small ? .55 : .75})" fill="${active ? col : '#6b7f89'}"/>`}
+${this._c.no_icons
+  ? `<text x="${cx}" y="${cy + r * (small ? 0.22 : 0.12)}" text-anchor="middle" class="num" font-size="${Math.round(r * (small ? 0.62 : 0.56))}" fill="${active ? '#eef3f5' : '#7f939c'}">${v}</text><text x="${cx}" y="${cy + r * (small ? 0.62 : 0.46)}" text-anchor="middle" font-size="${small ? 7 : 8.5}" fill="#8fa3ad">${u}</text>`
+  : `<text x="${cx}" y="${cy + r * (small ? 0.45 : 0.28)}" text-anchor="middle" class="num" font-size="${r > 34 ? 15 : small ? 10 : 12}" fill="${active ? '#eef3f5' : '#7f939c'}">${v}<tspan font-size="${small ? 6.5 : 8}" fill="#8fa3ad" dx="1.5">${u}</tspan></text>`}
+${!small ? `<text x="${cx}" y="${cy + r * (this._c.no_icons ? 0.74 : 0.62)}" text-anchor="middle" font-size="7.5" fill="${col}" opacity=".85">${sub || ''}</text>` : ''}
 <text x="${cx}" y="${ly}" text-anchor="middle" class="lbl">${label}</text>
 ${small && sub ? `<text x="${cx}" y="${sy}" text-anchor="middle" font-size="7" fill="${col}" opacity=".7">${sub}</text>` : ''}
 </g>`;
@@ -156,7 +158,7 @@ ${c.ev ? node(c.ev, 272, 270, 22, C.ev, I.ev, ev === null && evSoc !== null ? 0 
 </svg>`;
 const pct = fc ? Math.min(100, pvToday / fc * 100) : 0;
 const st = (k, v, u, id, bar, col) => `<div class="st" data-e="${id || ''}"><div class="k">${k}</div><div class="v">${v}<small>${u}</small></div>${bar !== undefined ? `<div class="bar"><b style="width:${bar}%;background:${col};box-shadow:0 0 8px ${col}"></b></div>` : ''}</div>`;
-const html = `<ha-card><div class="grid"></div>
+const html = `<ha-card style="${c.scale ? "zoom:" + c.scale : ""}"><div class="grid"></div>
 <div class="hdr"><div class="ttl">${c.title}</div><div class="live"><i></i>live</div></div>
 <div class="stats">
 ${st('Prodotta oggi', pvToday.toFixed(1).replace('.', ','), 'kWh', (c.solar_today || [])[0], pct, C.pv)}
