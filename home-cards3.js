@@ -21,7 +21,7 @@ const SLEEP = { off: 'Off', '30_min': '30′', '60_min': '60′', '90_min': '90�
 const fmt = (s) => { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
 // disegno del frontale (ispirato all'R-N2000A: due VU meter retroilluminati, manopole, display OLED in basso)
-function ampSvg({ on, play, vol, srcIdx, srcN, text, finish }) {
+function ampSvg({ on, play, vol, srcIdx, srcN, text, finish, brand }) {
   const silver = finish !== 'black';
   const face = silver ? ['#e9edf0', '#c3c9ce', '#9aa2a8'] : ['#3a3f44', '#24282c', '#16191c'];
   const ink = silver ? '#3b4248' : '#c9d0d6';
@@ -54,7 +54,7 @@ function ampSvg({ on, play, vol, srcIdx, srcN, text, finish }) {
   <rect x="2" y="2" width="336" height="102" rx="6" fill="url(#face)" stroke="${silver ? '#7f878d' : '#000'}" stroke-width="1"/>
   <rect x="2" y="2" width="336" height="102" rx="6" fill="url(#brush)"/>
   <rect x="8" y="104" width="14" height="5" rx="1.5" fill="${silver ? '#b8a27a' : '#6b5b3e'}"/><rect x="318" y="104" width="14" height="5" rx="1.5" fill="${silver ? '#b8a27a' : '#6b5b3e'}"/>
-  <text x="14" y="15" font-size="6.5" letter-spacing="1.6" fill="${ink}" font-family="Helvetica,Arial,sans-serif" font-weight="700">YAMAHA</text>
+  <text x="14" y="15" font-size="6.5" letter-spacing="1.6" fill="${ink}" font-family="Helvetica,Arial,sans-serif" font-weight="700">${brand || 'YAMAHA'}</text>
   <text x="326" y="15" font-size="4.6" letter-spacing=".6" fill="${ink}" text-anchor="end" font-family="Helvetica,Arial,sans-serif" opacity=".8">NATURAL SOUND NETWORK RECEIVER</text>
   <g transform="translate(22 50)"><rect x="-5" y="-9" width="10" height="18" rx="2" fill="#16191c"/><rect x="-3.2" y="${on ? -7 : -1}" width="6.4" height="8" rx="1.2" fill="${silver ? '#dfe4e8' : '#6c737a'}"/><circle cy="14" r="1.6" fill="${on ? '#ff6b3d' : '#5a2a1c'}" ${on ? 'filter="url(#tglow)"' : ''}/></g>
   ${knob(56, 50, 17, -120 + (srcN > 1 ? srcIdx / (srcN - 1) : 0) * 240, true)}
@@ -175,7 +175,7 @@ class ReceiverCard extends HTMLElement {
 </style>
 <ha-card class="${on ? '' : 'off'}"><div class="bgimg"></div>
 <div class="hd"><ha-icon icon="mdi:speaker"></ha-icon>${esc(c.name || ya.friendly_name)}<button class="pw ${on ? 'on' : ''}" data-a="pw" title="Accendi / spegni"><ha-icon icon="mdi:power"></ha-icon></button></div>
-<div class="ampw" data-a="info">${ampSvg({ on, play, vol: muted ? 0 : vol, srcIdx: Math.max(0, list.indexOf(src)), srcN: list.length, finish: c.finish, text: on ? (SRC_NAME[src] || src || '').toUpperCase() + (ma.media_title ? '  ' + ma.media_title.slice(0, 26) : '') : '' })}</div>
+<div class="ampw" data-a="info">${c.image ? `<img src="${c.image}" alt="" style="display:block;width:100%;max-height:120px;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))">` : ampSvg({ brand: c.brand, on, play, vol: muted ? 0 : vol, srcIdx: Math.max(0, list.indexOf(src)), srcN: list.length, finish: c.finish, text: on ? (SRC_NAME[src] || src || '').toUpperCase() + (ma.media_title ? '  ' + ma.media_title.slice(0, 26) : '') : '' })}</div>
 <div class="hero" data-a="info">
   ${pic ? '<div class="cv"></div>' : ''}
   <div class="i">${on && src ? `<span class="badge"><ha-icon icon="${SRC_ICON[src] || 'mdi:import'}"></ha-icon>${esc(SRC_NAME[src] || src)}</span>` : ''}

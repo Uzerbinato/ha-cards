@@ -22,8 +22,8 @@ const INK = { black: '#2b2f36', grey: '#6b7280', 'blue-grey': '#4b5563', cyan: '
 
 // tachimetro: arco 240°, tacche, zona colorata e lancetta
 const TACHO_CSS = `.tc{position:relative;text-align:center;padding:8px 4px 6px;border-radius:16px;background:radial-gradient(circle at 50% 60%,rgba(255,255,255,.05),rgba(148,163,184,.04) 70%);border:1px solid rgba(148,163,184,.1);cursor:pointer}
-  .tc svg{width:100%;max-width:150px;height:auto;display:block;margin:0 auto}
-  .tc .tv{position:absolute;left:0;right:0;top:66%;font-size:18px;font-weight:600;color:var(--primary-text-color);line-height:1} .tc .tv small{font-size:11px;color:var(--secondary-text-color);font-weight:500}
+  .tc svg{width:75%;max-width:112px;height:auto;display:block;margin:0 auto}
+  .tc .tv{position:absolute;left:0;right:0;top:60%;font-size:16px;font-weight:600;color:var(--primary-text-color);line-height:1} .tc .tv small{font-size:11px;color:var(--secondary-text-color);font-weight:500}
   .tc .tl{font-size:12px;color:var(--secondary-text-color);margin-top:-6px}
   .tc .nd{transition:transform .8s cubic-bezier(.3,1.4,.5,1)}`;
 const tacho = (v, max, col, warn, alarm) => {
@@ -68,7 +68,7 @@ class PrinterCard extends HTMLElement {
       .cmp .art{width:110px;height:96px}
       .cmp .hd{display:flex;align-items:center;gap:10px;min-width:0}.cmp .hd .name{flex:1;min-width:0}.cmp .pill{margin-top:0}
       .cmp .inks{margin-top:10px;gap:8px}.cmp .cart{height:44px;max-width:30px}
-    </style><ha-card>${c.compact ? `<div class="cmp"><div class="art">${art}</div><div style="min-width:0">
+    </style><ha-card>${c.compact ? `<div class="cmp" style="grid-template-columns:${inks.length > 4 ? 84 : 110}px 1fr"><div class="art" style="width:${inks.length > 4 ? 84 : 110}px">${art}</div><div style="min-width:0">
       <div class="hd"><div class="name">${esc(c.name || (s && s.attributes.friendly_name) || c.entity)}</div><div class="pill ${lab[1]}"><span class="dot"></span>${esc(lab[0])}</div></div>` : `<div class="top"><div class="art">${art}</div><div class="meta">
       <div class="name">${esc(c.name || (s && s.attributes.friendly_name) || c.entity)}</div>
       <div class="sub">${esc(c.subtitle || (c.model === 'plotter' ? 'Plotter grande formato' : 'Multifunzione a colori'))}</div>
