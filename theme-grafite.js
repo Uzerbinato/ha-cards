@@ -86,7 +86,7 @@
   const boost = (root) => {
     const all = root.querySelectorAll ? root.querySelectorAll('*') : [];
     for (const el of all) {
-      if (el.shadowRoot) boost(el.shadowRoot);
+      if (el.shadowRoot) { watch(el.shadowRoot); boost(el.shadowRoot); }
       if (seen.has(el) || el instanceof SVGElement) continue;
       seen.add(el);
       const hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
@@ -96,11 +96,11 @@
     }
   };
   const obs = new WeakSet();
-  const watch = (root) => {
+  function watch(root) {
     if (!root || obs.has(root)) return; obs.add(root);
     new MutationObserver(() => { boost(root); }).observe(root, { childList: true, subtree: true });
     (root.querySelectorAll ? root.querySelectorAll('*') : []).forEach((el) => el.shadowRoot && watch(el.shadowRoot));
-  };
+  }
   setInterval(() => { boost(document); watch(document); document.querySelectorAll('*').forEach((el) => el.shadowRoot && watch(el.shadowRoot)); }, 4000);
 })();
 
