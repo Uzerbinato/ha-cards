@@ -51,7 +51,10 @@ class PrinterCard extends HTMLElement {
     const lab = { idle: ['Pronta', 'ok'], printing: ['In stampa', 'busy'], processing: ['In stampa', 'busy'], stopped: ['Ferma', 'bad'], unavailable: ['Non raggiungibile', 'off'], unknown: ['Sconosciuto', 'off'] }[st] || [st, 'off'];
     const inks = (c.inks || []).map((k) => ({ ...k, v: num(h, k.entity) }));
     const low = inks.filter((k) => k.v !== null && k.v < 15);
-    const key = st + inks.map((k) => k.v).join(',');
+    const rs = String((s && s.attributes.state_reason) || '').toLowerCase();
+    const RS = [['media-empty', 'Carta esaurita'], ['media-needed', 'Carta esaurita'], ['media-jam', 'Carta inceppata'], ['media-low', 'Carta in esaurimento'], ['door-open', 'Sportello aperto'], ['cover-open', 'Coperchio aperto'], ['toner-empty', 'Toner esaurito'], ['marker-supply-empty', 'Inchiostro esaurito'], ['offline', 'Offline']];
+    const rmsg = (RS.find(([k]) => rs.includes(k)) || [])[1] || '';
+    const key = st + rs + inks.map((k) => k.v).join(',');
     if (key === this._key) return; this._key = key;
     const art = c.image ? `<img src="${esc(c.image)}" alt="" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))">` : (c.model === 'plotter' ? this._plotter(st) : this._mfp(st));
     this.shadowRoot.innerHTML = `<style>${DC_CSS}
@@ -75,7 +78,7 @@ class PrinterCard extends HTMLElement {
       <div class="pill ${lab[1]}"><span class="dot"></span>${esc(lab[0])}</div></div></div>`}
       <div class="inks">${inks.map((k) => `<div class="ink" data-e="${esc(k.entity)}"><div class="cart"><div class="fill" style="height:${k.v === null ? 0 : Math.max(3, k.v)}%;background:${INK[k.color] || k.color || '#888'}"></div></div>
         <div class="pct ${k.v !== null && k.v < 15 ? 'low' : ''}">${fmt(k.v)}%</div><div class="iname">${esc(k.name)}</div></div>`).join('')}</div>
-      ${low.length ? `<div class="warn">Da sostituire presto: ${low.map((k) => esc(k.name)).join(', ')}</div>` : ''}${c.compact ? '</div></div>' : ''}</ha-card>`;
+      ${rmsg ? `<div class="warn" style="color:#f87171;font-weight:600;font-size:13px">\u26A0 ${esc(rmsg)}</div>` : ''}${low.length ? `<div class="warn">Da sostituire presto: ${low.map((k) => esc(k.name)).join(', ')}</div>` : ''}${c.compact ? '</div></div>' : ''}</ha-card>`;
     this.shadowRoot.querySelectorAll('.ink').forEach((el) => el.addEventListener('click', () => this.dispatchEvent(new CustomEvent('hass-more-info', { bubbles: true, composed: true, detail: { entityId: el.dataset.e } }))));
   }
   _mfp(st) {
