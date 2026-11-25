@@ -160,7 +160,7 @@ class HostCard extends HTMLElement {
     const col = (x, w, a) => (x === null ? '#475569' : x >= a ? '#f87171' : x >= w ? '#fbbf24' : '#f5b544');
     const bar = (lab, x, unit, w, a, max = 100, d = 0) => `<div class="row" data-e="${esc(c[{ CPU: 'cpu', Temperatura: 'temp', Memoria: 'mem', Disco: 'disk' }[lab]] || '')}"><div class="rl"><span>${lab}</span><b>${fmt(x, d)}${unit}</b></div>
       <div class="trk"><div class="bf" style="width:${x === null ? 0 : Math.min(100, (x / max) * 100)}%;background:${col(x, w, a)}"></div></div></div>`;
-    const art = c.image ? `<div class="art"><img src="${esc(c.image)}" alt="" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))"></div>` : '';
+    const art = c.image ? `<div class="art" style="${c.image === false ? 'display:none' : ''}"><img src="${esc(c.image)}" alt="" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))"></div>` : '';
     this.shadowRoot.innerHTML = `<style>${DC_CSS}
       .tg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px} ${TACHO_CSS}
       .row{cursor:pointer} .rl{display:flex;justify-content:space-between;font-size:12px;color:var(--secondary-text-color);margin-bottom:5px} .rl b{color:var(--primary-text-color);font-weight:600;font-size:13px}
@@ -719,8 +719,8 @@ ha-card.dis{border-color:rgba(251,191,36,.30)}ha-card.chg{border-color:rgba(52,2
       });
       R.querySelectorAll("[data-thr]").forEach((el) => el.onclick = () => h.callService("input_number", "set_value", { entity_id: c.threshold, value: +el.dataset.thr }));
       R.querySelectorAll("[data-rel]").forEach((el) => el.onclick = () => h.callService("input_datetime", "set_datetime", { entity_id: c.release, time: el.dataset.rel + ":00" }));
-      R.querySelector('[data-t="res"]').onclick = () => h.callService("input_boolean", resOn ? "turn_off" : "turn_on", { entity_id: c.reserve });
-      R.querySelector('[data-t="grid"]').onclick = (ev) => {
+      (R.querySelector('[data-t="res"]') || {}).onclick = () => h.callService("input_boolean", resOn ? "turn_off" : "turn_on", { entity_id: c.reserve });
+      (R.querySelector('[data-t="grid"]') || {}).onclick = (ev) => {
         if (!grid && !confirm(ev.currentTarget, "Tocca di nuovo per attivare")) return;
         B.forEach((b) => h.callService("switch", grid ? "turn_off" : "turn_on", { entity_id: b.grid }));
       };
