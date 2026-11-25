@@ -1,78 +1,93 @@
-/* home-cards.js - card su misura per la Home
-   custom:appliance-card  elettrodomestico Home Connect con illustrazione animata
-     kind: dryer | dishwasher, name, prefix (es. sensor.c_t_asciugatrice -> usa *_stato_di_funzionamento, *_avanzamento_del_programma,
-     *_orario_di_fine_del_programma, *_porta), program (select active), selected (select selezionato), remote (binary avvio remoto),
-     power (sensor W opzionale), pause (button), stop (button)
-   custom:battery-card    due batterie Huawei LUNA: stato, modalità, riserva per la sera, carica dalla rete
-   custom:priority-card   protezione contatore: ordine con cui sospendere i carichi (input_text)
-   custom:waste-card      raccolta rifiuti con anteprima dei bidoni (sensori rifiuti_oggi / rifiuti_domani / rifiuti_prossimi_giorni) */
 (() => {
-const BG = 'radial-gradient(120% 90% at 50% 0%,#18242b 0%,#0d1317 62%,#0a0f12 100%)';
-const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const hhmm = (d) => d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-const PROG = {
-  cotton: 'Cotone', synthetic: 'Sintetici', mix: 'Misti', towels: 'Asciugamani', time_cold: 'Aria fredda', time_warm: 'Aria calda a tempo', super_40: 'Super 40′',
-  shirts_15: 'Camicie', delicates: 'Delicati', wool_finish: 'Lana', outdoor: 'Outdoor', down_feathers: 'Piumini', blankets: 'Coperte', dessous: 'Intimo',
-  intensiv_70: 'Intensivo 70°', auto_2: 'Auto 45–65°', auto_1: 'Auto 35–45°', auto_3: 'Auto 65–75°', eco_50: 'Eco 50°', glas_40: 'Vetri 40°', quick_45: 'Rapido 45°',
-  pre_rinse: 'Prelavaggio', night_wash: 'Notturno', kurz_60: 'Breve 60°', machine_care: 'Cura macchina', quick_65: 'Rapido 65°'
-};
-const progName = (v) => { if (!v || ['unknown', 'unavailable'].includes(v)) return ''; const k = v.replace(/^.*_program_/, ''); return PROG[k] || k.replace(/_/g, ' '); };
-
-/* ---------- illustrazioni ---------- */
-function dryerSVG(st, pct) {
-  const run = st === 'run', fin = st === 'finished';
-  const ring = 2 * Math.PI * 33, off = ring * (1 - (pct || 0) / 100);
-  const acc = run ? '#22d3ee' : fin ? '#4ade80' : '#64748b';
-  return `<svg viewBox="0 0 100 124" class="ill">
-  <defs><radialGradient id="dg" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="${run ? '#0e3a47' : '#141c22'}"/><stop offset="1" stop-color="#0a0f13"/></radialGradient>
+  const BG = "radial-gradient(120% 90% at 50% 0%,#18242b 0%,#0d1317 62%,#0a0f12 100%)";
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const hhmm = (d) => d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+  const PROG = {
+    cotton: "Cotone",
+    synthetic: "Sintetici",
+    mix: "Misti",
+    towels: "Asciugamani",
+    time_cold: "Aria fredda",
+    time_warm: "Aria calda a tempo",
+    super_40: "Super 40\u2032",
+    shirts_15: "Camicie",
+    delicates: "Delicati",
+    wool_finish: "Lana",
+    outdoor: "Outdoor",
+    down_feathers: "Piumini",
+    blankets: "Coperte",
+    dessous: "Intimo",
+    intensiv_70: "Intensivo 70\xB0",
+    auto_2: "Auto 45\u201365\xB0",
+    auto_1: "Auto 35\u201345\xB0",
+    auto_3: "Auto 65\u201375\xB0",
+    eco_50: "Eco 50\xB0",
+    glas_40: "Vetri 40\xB0",
+    quick_45: "Rapido 45\xB0",
+    pre_rinse: "Prelavaggio",
+    night_wash: "Notturno",
+    kurz_60: "Breve 60\xB0",
+    machine_care: "Cura macchina",
+    quick_65: "Rapido 65\xB0"
+  };
+  const progName = (v) => {
+    if (!v || ["unknown", "unavailable"].includes(v)) return "";
+    const k = v.replace(/^.*_program_/, "");
+    return PROG[k] || k.replace(/_/g, " ");
+  };
+  function dryerSVG(st, pct) {
+    const run = st === "run", fin = st === "finished";
+    const ring = 2 * Math.PI * 33, off = ring * (1 - (pct || 0) / 100);
+    const acc = run ? "#22d3ee" : fin ? "#4ade80" : "#64748b";
+    return `<svg viewBox="0 0 100 124" class="ill">
+  <defs><radialGradient id="dg" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="${run ? "#0e3a47" : "#141c22"}"/><stop offset="1" stop-color="#0a0f13"/></radialGradient>
   <linearGradient id="bd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3640"/><stop offset="1" stop-color="#1a232a"/></linearGradient></defs>
   <rect x="6" y="4" width="88" height="116" rx="12" fill="url(#bd)" stroke="rgba(255,255,255,.08)"/>
   <rect x="6" y="4" width="88" height="20" rx="12" fill="rgba(255,255,255,.04)"/>
   <circle cx="20" cy="14" r="4.5" fill="#0f161b" stroke="rgba(255,255,255,.15)"/>
   <rect x="34" y="10" width="30" height="8" rx="2" fill="#0b1115"/><rect x="36" y="12" width="${run ? 26 * (pct || 0) / 100 : 0}" height="4" rx="1" fill="${acc}" opacity=".9"/>
-  <circle cx="78" cy="14" r="2.2" fill="${acc}" class="${run ? 'blink' : ''}"/>
+  <circle cx="78" cy="14" r="2.2" fill="${acc}" class="${run ? "blink" : ""}"/>
   <circle cx="50" cy="70" r="38" fill="#0d1418" stroke="rgba(255,255,255,.07)"/>
   <circle cx="50" cy="70" r="33" fill="none" stroke="rgba(148,163,184,.14)" stroke-width="3.5"/>
   <circle cx="50" cy="70" r="33" fill="none" stroke="${acc}" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="${ring}" stroke-dashoffset="${run ? off : fin ? 0 : ring}" transform="rotate(-90 50 70)" style="filter:drop-shadow(0 0 4px ${acc})"/>
   <circle cx="50" cy="70" r="27" fill="url(#dg)"/>
-  <g class="${run ? 'spin' : ''}" style="transform-origin:50px 70px">
-    <path d="M36 74 q6 -10 14 -4 q6 5 12 -2 q2 8 -6 12 q-10 4 -20 -6z" fill="${run ? '#38bdf8' : '#334155'}" opacity=".85"/>
-    <path d="M44 58 q8 -4 12 2 q-4 6 -12 4z" fill="${run ? '#f472b6' : '#3b4656'}" opacity=".8"/>
-    <path d="M58 80 q6 2 4 8 q-6 0 -8 -4z" fill="${run ? '#fbbf24' : '#3b4656'}" opacity=".8"/>
+  <g class="${run ? "spin" : ""}" style="transform-origin:50px 70px">
+    <path d="M36 74 q6 -10 14 -4 q6 5 12 -2 q2 8 -6 12 q-10 4 -20 -6z" fill="${run ? "#38bdf8" : "#334155"}" opacity=".85"/>
+    <path d="M44 58 q8 -4 12 2 q-4 6 -12 4z" fill="${run ? "#f472b6" : "#3b4656"}" opacity=".8"/>
+    <path d="M58 80 q6 2 4 8 q-6 0 -8 -4z" fill="${run ? "#fbbf24" : "#3b4656"}" opacity=".8"/>
     <circle cx="50" cy="70" r="27" fill="none" stroke="rgba(255,255,255,.05)" stroke-dasharray="3 6"/>
   </g>
   <ellipse cx="42" cy="58" rx="12" ry="6" fill="rgba(255,255,255,.06)" transform="rotate(-30 42 58)"/>
-  ${fin ? '<circle cx="76" cy="104" r="10" fill="#16a34a"/><path d="M71 104 l3.5 3.5 l6.5 -7" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>' : ''}
+  ${fin ? '<circle cx="76" cy="104" r="10" fill="#16a34a"/><path d="M71 104 l3.5 3.5 l6.5 -7" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>' : ""}
   </svg>`;
-}
-function dishSVG(st, pct) {
-  const run = st === 'run', fin = st === 'finished';
-  const acc = run ? '#22d3ee' : fin ? '#4ade80' : '#64748b';
-  const drops = run ? [18, 30, 44, 58, 72, 84].map((x, i) => `<circle cx="${x}" cy="40" r="2.2" fill="#7dd3fc" class="drop" style="animation-delay:${(i * 0.27).toFixed(2)}s"/>`).join('') : '';
-  const steam = (run || fin) ? [34, 50, 66].map((x, i) => `<path d="M${x} 2 q-4 -6 0 -12 q4 -6 0 -12" stroke="rgba(203,213,225,.35)" stroke-width="2" fill="none" class="steam" style="animation-delay:${i * 0.6}s"/>`).join('') : '';
-  return `<svg viewBox="0 -26 100 150" class="ill">
+  }
+  function dishSVG(st, pct) {
+    const run = st === "run", fin = st === "finished";
+    const acc = run ? "#22d3ee" : fin ? "#4ade80" : "#64748b";
+    const drops = run ? [18, 30, 44, 58, 72, 84].map((x, i) => `<circle cx="${x}" cy="40" r="2.2" fill="#7dd3fc" class="drop" style="animation-delay:${(i * 0.27).toFixed(2)}s"/>`).join("") : "";
+    const steam = run || fin ? [34, 50, 66].map((x, i) => `<path d="M${x} 2 q-4 -6 0 -12 q4 -6 0 -12" stroke="rgba(203,213,225,.35)" stroke-width="2" fill="none" class="steam" style="animation-delay:${i * 0.6}s"/>`).join("") : "";
+    return `<svg viewBox="0 -26 100 150" class="ill">
   <defs><linearGradient id="db" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3640"/><stop offset="1" stop-color="#1a232a"/></linearGradient>
-  <linearGradient id="dw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${run ? '#0e3a47' : '#121a20'}"/><stop offset="1" stop-color="#0a1014"/></linearGradient>
+  <linearGradient id="dw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${run ? "#0e3a47" : "#121a20"}"/><stop offset="1" stop-color="#0a1014"/></linearGradient>
   <clipPath id="dc"><rect x="12" y="30" width="76" height="80" rx="6"/></clipPath></defs>
   ${steam}
   <rect x="6" y="4" width="88" height="116" rx="10" fill="url(#db)" stroke="rgba(255,255,255,.08)"/>
   <rect x="6" y="4" width="88" height="18" rx="10" fill="rgba(255,255,255,.04)"/>
-  <rect x="14" y="9" width="40" height="8" rx="2" fill="#0b1115"/><rect x="16" y="11" width="${(run ? 36 * (pct || 0) / 100 : fin ? 36 : 0)}" height="4" rx="1" fill="${acc}" opacity=".9"/>
-  <circle cx="64" cy="13" r="2.4" fill="#3b4656"/><circle cx="72" cy="13" r="2.4" fill="#3b4656"/><circle cx="82" cy="13" r="2.4" fill="${acc}" class="${run ? 'blink' : ''}"/>
+  <rect x="14" y="9" width="40" height="8" rx="2" fill="#0b1115"/><rect x="16" y="11" width="${run ? 36 * (pct || 0) / 100 : fin ? 36 : 0}" height="4" rx="1" fill="${acc}" opacity=".9"/>
+  <circle cx="64" cy="13" r="2.4" fill="#3b4656"/><circle cx="72" cy="13" r="2.4" fill="#3b4656"/><circle cx="82" cy="13" r="2.4" fill="${acc}" class="${run ? "blink" : ""}"/>
   <rect x="12" y="30" width="76" height="80" rx="6" fill="url(#dw)" stroke="rgba(255,255,255,.06)"/>
   <g clip-path="url(#dc)">
     <g stroke="rgba(148,163,184,.25)" stroke-width="1.5" fill="none"><path d="M16 64 h68"/><path d="M16 94 h68"/></g>
-    ${[22, 34, 46, 58, 70].map((x) => `<rect x="${x}" y="70" width="7" height="22" rx="3" fill="${run ? '#1e4b5a' : '#26323b'}"/>`).join('')}
-    ${[24, 40, 56, 72].map((x) => `<path d="M${x} 60 a7 7 0 0 1 12 0" fill="none" stroke="${run ? '#2a6577' : '#2b3741'}" stroke-width="3"/>`).join('')}
+    ${[22, 34, 46, 58, 70].map((x) => `<rect x="${x}" y="70" width="7" height="22" rx="3" fill="${run ? "#1e4b5a" : "#26323b"}"/>`).join("")}
+    ${[24, 40, 56, 72].map((x) => `<path d="M${x} 60 a7 7 0 0 1 12 0" fill="none" stroke="${run ? "#2a6577" : "#2b3741"}" stroke-width="3"/>`).join("")}
     ${drops}
-    ${run ? `<rect x="12" y="${110 - 80 * (pct || 0) / 100}" width="76" height="${80 * (pct || 0) / 100}" fill="rgba(34,211,238,.08)"/>` : ''}
+    ${run ? `<rect x="12" y="${110 - 80 * (pct || 0) / 100}" width="76" height="${80 * (pct || 0) / 100}" fill="rgba(34,211,238,.08)"/>` : ""}
   </g>
   <rect x="30" y="26" width="40" height="3" rx="1.5" fill="rgba(255,255,255,.18)"/>
-  ${fin ? '<circle cx="78" cy="102" r="10" fill="#16a34a"/><path d="M73 102 l3.5 3.5 l6.5 -7" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>' : ''}
+  ${fin ? '<circle cx="78" cy="102" r="10" fill="#16a34a"/><path d="M73 102 l3.5 3.5 l6.5 -7" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>' : ""}
   </svg>`;
-}
-
-const CSS_APP = `
+  }
+  const CSS_APP = `
 ha-card{background:${BG};border:1px solid rgba(140,200,255,.10);border-radius:20px;color:#e6edf7;font-family:var(--primary-font-family,inherit);padding:14px 16px;display:flex;gap:14px;align-items:center;position:relative;overflow:hidden;cursor:pointer;transition:border-color .3s}
 ha-card.run{border-color:rgba(34,211,238,.38);box-shadow:0 0 0 1px rgba(34,211,238,.10),0 10px 30px rgba(8,145,178,.18)}
 ha-card.run::before{content:'';position:absolute;inset:-40%;background:radial-gradient(circle at 20% 50%,rgba(34,211,238,.14),transparent 40%);animation:glow 4s ease-in-out infinite;pointer-events:none}
@@ -107,100 +122,134 @@ ha-card.off .ill{opacity:.55;filter:saturate(.4)}
 @keyframes shim{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
 @keyframes glow{50%{transform:translateX(30%)}}
 `;
-
-class ApplianceCard extends HTMLElement {
-  setConfig(c) { if (!c.prefix) throw new Error('prefix obbligatorio'); this._c = Object.assign({ kind: 'dryer', name: 'Elettrodomestico' }, c); }
-  getCardSize() { return 2; }
-  getGridOptions() { return { columns: 12, rows: 'auto' }; }
-  connectedCallback() { this._iv = setInterval(() => this._render(), 30000); }
-  disconnectedCallback() { clearInterval(this._iv); }
-  set hass(h) {
-    this._h = h;
-    if (!this.shadowRoot) { this.attachShadow({ mode: 'open' }); }
-    const p = this._c.prefix, key = ['_stato_di_funzionamento', '_avanzamento_del_programma', '_orario_di_fine_del_programma', '_porta'].map((s) => h.states[p + s] && h.states[p + s].state).join('|')
-      + '|' + [this._c.program, this._c.selected, this._c.remote, this._c.power].map((e) => e && h.states[e] ? h.states[e].state : '').join('|');
-    if (key !== this._k) { this._k = key; this._render(); }
-  }
-  _s(id) { const s = this._h && this._h.states[id]; return s ? s.state : undefined; }
-  _render() {
-    if (!this._h || !this.shadowRoot) return;
-    const c = this._c, p = c.prefix;
-    let op = this._s(p + '_stato_di_funzionamento') || 'unavailable';
-    const pct = parseFloat(this._s(p + '_avanzamento_del_programma')) || 0;
-    const fin = this._s(p + '_orario_di_fine_del_programma');
-    const door = this._s(p + '_porta');
-    const prog = progName(this._s(c.program)) || progName(this._s(c.selected));
-    const remote = c.remote ? this._s(c.remote) === 'on' : false;
-    const pw = c.power ? parseFloat(this._s(c.power)) : NaN;
-    const RUN = ['run', 'pause', 'delayedstart', 'actionrequired'];
-    let cls, big, sub = '', bar = '';
-    if (op === 'run' || op === 'pause' || op === 'actionrequired') {
-      cls = 'run';
-      let m = null; if (fin && !['unknown', 'unavailable'].includes(fin)) m = Math.round((new Date(fin) - Date.now()) / 60000);
-      big = m != null ? (m > 0 ? (m >= 60 ? Math.floor(m / 60) + '<small>h</small> ' + (m % 60) + '<small>min</small>' : m + '<small>min</small>') : 'Quasi finito') : (pct + '<small>%</small>');
-      sub = (op === 'pause' ? 'In pausa' : op === 'actionrequired' ? 'Richiede un intervento' : 'In funzione') + (m != null && m > 0 ? ' · fine alle ' + hhmm(new Date(fin)) : '');
-      bar = '<div class="bar"><div style="width:' + Math.max(3, pct) + '%"></div></div>';
-    } else if (op === 'delayedstart') {
-      cls = 'run'; big = 'Programmata';
-      sub = fin && !['unknown', 'unavailable'].includes(fin) ? 'fine prevista alle ' + hhmm(new Date(fin)) : 'partenza ritardata';
-    } else if (op === 'finished') {
-      cls = 'fin'; big = 'Finito'; sub = c.kind === 'dryer' ? 'Il bucato è asciutto: puoi svuotarla' : 'Piatti puliti: puoi svuotarla';
-    } else if (op === 'ready') {
-      cls = 'idle'; big = 'Pronta'; sub = prog ? 'Programma impostato: ' + prog : 'Accesa, nessun programma in corso';
-    } else if (op === 'inactive') {
-      cls = 'off'; big = 'Spenta'; sub = 'In standby';
-    } else { cls = 'off'; big = 'Non raggiungibile'; sub = 'Controlla il Wi-Fi dell\'elettrodomestico'; }
-    if (cls === 'off' || cls === 'idle') op = op === 'ready' ? 'ready' : 'off';
-    const chips = [];
-    if (door) chips.push('<span><ha-icon icon="' + (door === 'open' ? 'mdi:door-open' : door === 'locked' ? 'mdi:lock' : 'mdi:door-closed') + '"></ha-icon>' + (door === 'open' ? 'Porta aperta' : door === 'locked' ? 'Porta bloccata' : 'Porta chiusa') + '</span>');
-    if (remote) chips.push('<span><ha-icon icon="mdi:cellphone-wireless"></ha-icon>Avvio remoto</span>');
-    if (!isNaN(pw) && pw > 5) chips.push('<span><ha-icon icon="mdi:flash"></ha-icon>' + Math.round(pw) + ' W</span>');
-    if (cls === 'run' && pct) chips.unshift('<span><ha-icon icon="mdi:progress-clock"></ha-icon>' + Math.round(pct) + '%</span>');
-    const ill = c.kind === 'dishwasher' ? dishSVG(op, pct) : dryerSVG(op, pct);
-    let ac = '';
-    if (RUN.includes(this._s(p + '_stato_di_funzionamento'))) {
-      if (c.pause) ac += '<button data-a="pause" title="Pausa"><ha-icon icon="mdi:pause"></ha-icon></button>';
-      if (c.stop) ac += '<button data-a="stop" title="Interrompi"><ha-icon icon="mdi:stop"></ha-icon></button>';
+  class ApplianceCard extends HTMLElement {
+    setConfig(c) {
+      if (!c.prefix) throw new Error("prefix obbligatorio");
+      this._c = Object.assign({ kind: "dryer", name: "Elettrodomestico" }, c);
     }
-    this.shadowRoot.innerHTML = '<style>' + CSS_APP + '</style><ha-card class="' + cls + '">' + ill
-      + '<div class="i"><div class="nm">' + esc(c.name) + (prog && cls !== 'off' ? ' · <b>' + esc(prog) + '</b>' : '') + '</div><div class="big">' + big + '</div><div class="sub">' + esc(sub) + '</div>' + bar
-      + (chips.length ? '<div class="ch">' + chips.join('') + '</div>' : '') + '</div>' + (ac ? '<div class="ac">' + ac + '</div>' : '') + '</ha-card>';
-    const card = this.shadowRoot.querySelector('ha-card');
-    card.onclick = (ev) => {
-      const b = ev.target.closest('button');
-      if (b) {
-        ev.stopPropagation();
-        const ent = b.dataset.a === 'stop' ? c.stop : c.pause;
-        if (b.dataset.a === 'stop' && !b.classList.contains('warn')) { b.classList.add('warn'); b.title = 'Tocca di nuovo per interrompere'; setTimeout(() => b.classList.remove('warn'), 3000); return; }
-        this._h.callService('button', 'press', { entity_id: ent });
-        return;
+    getCardSize() {
+      return 2;
+    }
+    getGridOptions() {
+      return { columns: 12, rows: "auto" };
+    }
+    connectedCallback() {
+      this._iv = setInterval(() => this._render(), 3e4);
+    }
+    disconnectedCallback() {
+      clearInterval(this._iv);
+    }
+    set hass(h) {
+      this._h = h;
+      if (!this.shadowRoot) {
+        this.attachShadow({ mode: "open" });
       }
-      const e = new Event('hass-more-info', { bubbles: true, composed: true }); e.detail = { entityId: p + '_stato_di_funzionamento' }; this.dispatchEvent(e);
-    };
+      const p = this._c.prefix, key = ["_stato_di_funzionamento", "_avanzamento_del_programma", "_orario_di_fine_del_programma", "_porta"].map((s) => h.states[p + s] && h.states[p + s].state).join("|") + "|" + [this._c.program, this._c.selected, this._c.remote, this._c.power].map((e) => e && h.states[e] ? h.states[e].state : "").join("|");
+      if (key !== this._k) {
+        this._k = key;
+        this._render();
+      }
+    }
+    _s(id) {
+      const s = this._h && this._h.states[id];
+      return s ? s.state : void 0;
+    }
+    _render() {
+      if (!this._h || !this.shadowRoot) return;
+      const c = this._c, p = c.prefix;
+      let op = this._s(p + "_stato_di_funzionamento") || "unavailable";
+      const pct = parseFloat(this._s(p + "_avanzamento_del_programma")) || 0;
+      const fin = this._s(p + "_orario_di_fine_del_programma");
+      const door = this._s(p + "_porta");
+      const prog = progName(this._s(c.program)) || progName(this._s(c.selected));
+      const remote = c.remote ? this._s(c.remote) === "on" : false;
+      const pw = c.power ? parseFloat(this._s(c.power)) : NaN;
+      const RUN = ["run", "pause", "delayedstart", "actionrequired"];
+      let cls, big, sub = "", bar = "";
+      if (op === "run" || op === "pause" || op === "actionrequired") {
+        cls = "run";
+        let m = null;
+        if (fin && !["unknown", "unavailable"].includes(fin)) m = Math.round((new Date(fin) - Date.now()) / 6e4);
+        big = m != null ? m > 0 ? m >= 60 ? Math.floor(m / 60) + "<small>h</small> " + m % 60 + "<small>min</small>" : m + "<small>min</small>" : "Quasi finito" : pct + "<small>%</small>";
+        sub = (op === "pause" ? "In pausa" : op === "actionrequired" ? "Richiede un intervento" : "In funzione") + (m != null && m > 0 ? " \xB7 fine alle " + hhmm(new Date(fin)) : "");
+        bar = '<div class="bar"><div style="width:' + Math.max(3, pct) + '%"></div></div>';
+      } else if (op === "delayedstart") {
+        cls = "run";
+        big = "Programmata";
+        sub = fin && !["unknown", "unavailable"].includes(fin) ? "fine prevista alle " + hhmm(new Date(fin)) : "partenza ritardata";
+      } else if (op === "finished") {
+        cls = "fin";
+        big = "Finito";
+        sub = c.kind === "dryer" ? "Il bucato \xE8 asciutto: puoi svuotarla" : "Piatti puliti: puoi svuotarla";
+      } else if (op === "ready") {
+        cls = "idle";
+        big = "Pronta";
+        sub = prog ? "Programma impostato: " + prog : "Accesa, nessun programma in corso";
+      } else if (op === "inactive") {
+        cls = "off";
+        big = "Spenta";
+        sub = "In standby";
+      } else {
+        cls = "off";
+        big = "Non raggiungibile";
+        sub = "Controlla il Wi-Fi dell'elettrodomestico";
+      }
+      if (cls === "off" || cls === "idle") op = op === "ready" ? "ready" : "off";
+      const chips = [];
+      if (door) chips.push('<span><ha-icon icon="' + (door === "open" ? "mdi:door-open" : door === "locked" ? "mdi:lock" : "mdi:door-closed") + '"></ha-icon>' + (door === "open" ? "Porta aperta" : door === "locked" ? "Porta bloccata" : "Porta chiusa") + "</span>");
+      if (remote) chips.push('<span><ha-icon icon="mdi:cellphone-wireless"></ha-icon>Avvio remoto</span>');
+      if (!isNaN(pw) && pw > 5) chips.push('<span><ha-icon icon="mdi:flash"></ha-icon>' + Math.round(pw) + " W</span>");
+      if (cls === "run" && pct) chips.unshift('<span><ha-icon icon="mdi:progress-clock"></ha-icon>' + Math.round(pct) + "%</span>");
+      const ill = c.kind === "dishwasher" ? dishSVG(op, pct) : dryerSVG(op, pct);
+      let ac = "";
+      if (RUN.includes(this._s(p + "_stato_di_funzionamento"))) {
+        if (c.pause) ac += '<button data-a="pause" title="Pausa"><ha-icon icon="mdi:pause"></ha-icon></button>';
+        if (c.stop) ac += '<button data-a="stop" title="Interrompi"><ha-icon icon="mdi:stop"></ha-icon></button>';
+      }
+      this.shadowRoot.innerHTML = "<style>" + CSS_APP + '</style><ha-card class="' + cls + '">' + ill + '<div class="i"><div class="nm">' + esc(c.name) + (prog && cls !== "off" ? " \xB7 <b>" + esc(prog) + "</b>" : "") + '</div><div class="big">' + big + '</div><div class="sub">' + esc(sub) + "</div>" + bar + (chips.length ? '<div class="ch">' + chips.join("") + "</div>" : "") + "</div>" + (ac ? '<div class="ac">' + ac + "</div>" : "") + "</ha-card>";
+      const card = this.shadowRoot.querySelector("ha-card");
+      card.onclick = (ev) => {
+        const b = ev.target.closest("button");
+        if (b) {
+          ev.stopPropagation();
+          const ent = b.dataset.a === "stop" ? c.stop : c.pause;
+          if (b.dataset.a === "stop" && !b.classList.contains("warn")) {
+            b.classList.add("warn");
+            b.title = "Tocca di nuovo per interrompere";
+            setTimeout(() => b.classList.remove("warn"), 3e3);
+            return;
+          }
+          this._h.callService("button", "press", { entity_id: ent });
+          return;
+        }
+        const e = new Event("hass-more-info", { bubbles: true, composed: true });
+        e.detail = { entityId: p + "_stato_di_funzionamento" };
+        this.dispatchEvent(e);
+      };
+    }
   }
-}
-
-/* ---------- rifiuti ---------- */
-const WASTE = {
-  Umido: { c: '#c0844a', d: '#5c2d0f', b: '#6b3d1e', icon: 'mdi:food-apple-outline', t: 'Organico', sb: 'Organico', rc: 1 },
-  Plastica: { c: '#facc15', d: '#854d0e', b: '#eab308', icon: 'mdi:bottle-soda-classic-outline', t: 'Plastica e lattine', sb: 'e lattine', rc: 1 },
-  Carta: { c: '#5b8def', d: '#1e3a8a', b: '#274b9f', icon: 'mdi:newspaper-variant-outline', t: 'Carta e cartone', sb: 'e cartone', rc: 1 },
-  Secco: { c: '#9ca3af', d: '#374151', b: '#80868f', icon: 'mdi:delete-variant', t: 'Secco non riciclabile', sb: 'non riciclabile', rc: 0 },
-  Vetro: { c: '#22c55e', d: '#14532d', b: '#2f7d3f', icon: 'mdi:glass-wine', t: 'Vetro', sb: 'bottiglie e vasetti', rc: 1 }
-};
-const WICO = {
-  Plastica: '<path d="M15 6h6v4h-6z"/><path d="M14 10h8v5l4 5v22a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3V20l4-5z"/><path d="M10 27h16M10 35h16"/><rect x="36" y="18" width="15" height="27" rx="3"/><path d="M36 23h15M36 40h15M41 14h5"/>',
-  Carta: '<path d="M13 8h24v30"/><rect x="8" y="12" width="24" height="31" rx="2"/><path d="M13 19h14M13 24h14M13 29h14M13 34h9"/><path d="M39 27l9-5 9 5v12l-9 5-9-5z"/><path d="M39 27l9 5 9-5M48 32v12"/>',
-  Vetro: '<path d="M7 12h18v5H7z"/><path d="M8 17h16v25a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3z"/><path d="M8 27h16"/><path d="M39 5h6v8c0 3 5 5 5 10v20a2 2 0 0 1-2 2H36a2 2 0 0 1-2-2V23c0-5 5-7 5-10z"/><path d="M34 30h16"/>',
-  Umido: '<path d="M21 16c-6-3-14 1-14 10 0 9 7 17 12 17 2 0 3-1 4-1s2 1 4 1c5 0 11-8 11-17 0-9-7-13-13-10"/><path d="M22 16c0-4 2-7 5-9"/><path d="M24 11c3-3 7-3 9-1-3 3-6 3-9 1z"/><path d="M41 28h17M45 24v8M49 23v10M53 24v8M41 28l-3-3v6zM58 28l4-4v8z"/>',
-  Secco: '<path d="M21 18c-8 6-12 14-12 20a6 6 0 0 0 6 6h18a6 6 0 0 0 6-6c0-6-4-14-12-20"/><path d="M21 18l-3-6M27 18l3-6M21 18h6"/><path d="M48 26c-5 4-8 9-8 13a4 4 0 0 0 4 4h10a4 4 0 0 0 4-4c0-4-3-9-8-13"/><path d="M48 26l-2-4M50 26l2-4M48 26h2"/>'
-};
-function wIcon(type, w) { return `<svg class="ic" viewBox="0 0 64 48" width="${w}" height="${Math.round(w * .75)}" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${WICO[type] || WICO.Secco}</svg>`; }
-function wBanner(type, small) {
-  const w = WASTE[type] || { b: '#475569', sb: '', rc: 0 };
-  return `<div class="bn${small ? ' sm' : ''}" style="--b:${w.b};--n:${String(type).length}"><div class="l"><div class="rc"><ha-icon icon="${w.rc ? 'mdi:recycle' : 'mdi:delete-outline'}"></ha-icon>${w.rc ? 'RICICLO' : 'INDIFFERENZIATO'}</div>${wIcon(type, small ? 50 : 64)}</div><div class="r"><div class="nm">${esc(type)}</div><div class="sb">${esc(w.sb)}</div></div></div>`;
-}
-const CSS_W = `
+  const WASTE = {
+    Umido: { c: "#c0844a", d: "#5c2d0f", b: "#6b3d1e", icon: "mdi:food-apple-outline", t: "Organico", sb: "Organico", rc: 1 },
+    Plastica: { c: "#facc15", d: "#854d0e", b: "#eab308", icon: "mdi:bottle-soda-classic-outline", t: "Plastica e lattine", sb: "e lattine", rc: 1 },
+    Carta: { c: "#5b8def", d: "#1e3a8a", b: "#274b9f", icon: "mdi:newspaper-variant-outline", t: "Carta e cartone", sb: "e cartone", rc: 1 },
+    Secco: { c: "#9ca3af", d: "#374151", b: "#80868f", icon: "mdi:delete-variant", t: "Secco non riciclabile", sb: "non riciclabile", rc: 0 },
+    Vetro: { c: "#22c55e", d: "#14532d", b: "#2f7d3f", icon: "mdi:glass-wine", t: "Vetro", sb: "bottiglie e vasetti", rc: 1 }
+  };
+  const WICO = {
+    Plastica: '<path d="M15 6h6v4h-6z"/><path d="M14 10h8v5l4 5v22a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3V20l4-5z"/><path d="M10 27h16M10 35h16"/><rect x="36" y="18" width="15" height="27" rx="3"/><path d="M36 23h15M36 40h15M41 14h5"/>',
+    Carta: '<path d="M13 8h24v30"/><rect x="8" y="12" width="24" height="31" rx="2"/><path d="M13 19h14M13 24h14M13 29h14M13 34h9"/><path d="M39 27l9-5 9 5v12l-9 5-9-5z"/><path d="M39 27l9 5 9-5M48 32v12"/>',
+    Vetro: '<path d="M7 12h18v5H7z"/><path d="M8 17h16v25a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3z"/><path d="M8 27h16"/><path d="M39 5h6v8c0 3 5 5 5 10v20a2 2 0 0 1-2 2H36a2 2 0 0 1-2-2V23c0-5 5-7 5-10z"/><path d="M34 30h16"/>',
+    Umido: '<path d="M21 16c-6-3-14 1-14 10 0 9 7 17 12 17 2 0 3-1 4-1s2 1 4 1c5 0 11-8 11-17 0-9-7-13-13-10"/><path d="M22 16c0-4 2-7 5-9"/><path d="M24 11c3-3 7-3 9-1-3 3-6 3-9 1z"/><path d="M41 28h17M45 24v8M49 23v10M53 24v8M41 28l-3-3v6zM58 28l4-4v8z"/>',
+    Secco: '<path d="M21 18c-8 6-12 14-12 20a6 6 0 0 0 6 6h18a6 6 0 0 0 6-6c0-6-4-14-12-20"/><path d="M21 18l-3-6M27 18l3-6M21 18h6"/><path d="M48 26c-5 4-8 9-8 13a4 4 0 0 0 4 4h10a4 4 0 0 0 4-4c0-4-3-9-8-13"/><path d="M48 26l-2-4M50 26l2-4M48 26h2"/>'
+  };
+  function wIcon(type, w) {
+    return `<svg class="ic" viewBox="0 0 64 48" width="${w}" height="${Math.round(w * 0.75)}" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${WICO[type] || WICO.Secco}</svg>`;
+  }
+  function wBanner(type, small) {
+    const w = WASTE[type] || { b: "#475569", sb: "", rc: 0 };
+    return `<div class="bn${small ? " sm" : ""}" style="--b:${w.b};--n:${String(type).length}"><div class="l"><div class="rc"><ha-icon icon="${w.rc ? "mdi:recycle" : "mdi:delete-outline"}"></ha-icon>${w.rc ? "RICICLO" : "INDIFFERENZIATO"}</div>${wIcon(type, small ? 50 : 64)}</div><div class="r"><div class="nm">${esc(type)}</div><div class="sb">${esc(w.sb)}</div></div></div>`;
+  }
+  const CSS_W = `
 ha-card{background:${BG};border:1px solid rgba(140,200,255,.10);border-radius:20px;color:#e6edf7;font-family:var(--primary-font-family,inherit);padding:14px 16px;position:relative;overflow:hidden;cursor:pointer}
 .hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}
 .k{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8fa3ad}
@@ -225,51 +274,64 @@ ha-card{background:${BG};border:1px solid rgba(140,200,255,.10);border-radius:20
 .d .x{font-size:11px;color:#64748b;padding:3px 0}
 .d.none{opacity:.45}
 `;
-const GG = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
-class WasteCard extends HTMLElement {
-  setConfig(c) { this._c = Object.assign({ today: 'sensor.rifiuti_oggi', tomorrow: 'sensor.rifiuti_domani', week: 'sensor.rifiuti_prossimi_giorni', days: 6 }, c || {}); }
-  getCardSize() { return 3; }
-  getGridOptions() { return { columns: 12, rows: 'auto' }; }
-  set hass(h) {
-    this._h = h; if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
-    const k = [this._c.today, this._c.tomorrow, this._c.week].map((e) => h.states[e] ? h.states[e].state : '').join('|') + new Date().getHours();
-    if (k !== this._k) { this._k = k; this._render(); }
-  }
-  _render() {
-    const h = this._h, c = this._c;
-    const st = (e) => (h.states[e] ? h.states[e].state : '');
-    const list = (s) => (!s || s === 'Nessuna raccolta' || s === 'unknown' || s === 'unavailable') ? [] : s.split(' + ').map((x) => x.trim());
-    const hr = new Date().getHours();
-    const showToday = hr < 8 && list(st(c.today)).length;
-    const main = showToday ? list(st(c.today)) : list(st(c.tomorrow));
-    const label = showToday ? 'Oggi' : 'Domani';
-    const week = st(c.week).split(' · ').filter(Boolean).map((x) => { const [d, t] = x.split(': '); return { d, t: list(t) }; });
-    let top;
-    if (main.length) {
-      top = '<div class="hd"><div class="k">Rifiuti · ' + label + '</div><div class="wh"><ha-icon icon="mdi:clock-outline"></ha-icon>' + (showToday ? 'Passano stamattina' : 'Esponi stasera dopo le 19') + '</div></div>'
-        + '<div class="bns">' + main.map((t) => wBanner(t, main.length > 1)).join('') + '</div>';
-    } else {
-      const nx = week.find((x) => x.t.length);
-      top = '<div class="hd"><div class="k">Rifiuti · Domani</div>' + (nx ? '<div class="wh">Prossima: <b>' + esc(nx.t.join(' + ')) + '</b> ' + esc(nx.d) + '</div>' : '') + '</div>'
-        + '<div class="bn none"><div class="l"><div class="rc"><ha-icon icon="mdi:calendar-check-outline"></ha-icon>CALENDARIO</div>' + wIcon('Secco', 50) + '</div><div class="r"><div class="nm">Nessuna raccolta</div></div></div>';
+  const GG = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
+  class WasteCard extends HTMLElement {
+    setConfig(c) {
+      this._c = Object.assign({ today: "sensor.rifiuti_oggi", tomorrow: "sensor.rifiuti_domani", week: "sensor.rifiuti_prossimi_giorni", days: 6 }, c || {});
     }
-    const days = [];
-    for (let i = 1; i <= 7 && days.length < c.days; i++) {
-      const d = new Date(); d.setDate(d.getDate() + i);
-      if (!showToday && i === 1 && main.length) continue;
-      const key = GG[d.getDay()] + ' ' + d.getDate();
-      const f = week.find((x) => x.d === key);
-      days.push({ g: GG[d.getDay()], n: d.getDate(), t: f ? f.t : [] });
+    getCardSize() {
+      return 3;
     }
-    const wk = '<div class="wk">' + days.map((x) => '<div class="d' + (x.t.length ? '' : ' none') + '"><div class="g">' + x.g + '</div><div class="n">' + x.n + '</div>'
-      + (x.t.length ? x.t.map((t) => '<div class="p" title="' + esc(t) + '" style="background:' + ((WASTE[t] || {}).b || '#475569') + '">' + wIcon(t, 30) + '</div>').join('') + '<div class="t">' + esc(x.t.join(' + ')) + '</div>' : '<div class="x">—</div>') + '</div>').join('') + '</div>';
-    this.shadowRoot.innerHTML = '<style>' + CSS_W + '</style><ha-card>' + top + wk + '</ha-card>';
-    this.shadowRoot.querySelector('ha-card').onclick = () => { const e = new Event('hass-more-info', { bubbles: true, composed: true }); e.detail = { entityId: c.week }; this.dispatchEvent(e); };
+    getGridOptions() {
+      return { columns: 12, rows: "auto" };
+    }
+    set hass(h) {
+      this._h = h;
+      if (!this.shadowRoot) this.attachShadow({ mode: "open" });
+      const k = [this._c.today, this._c.tomorrow, this._c.week].map((e) => h.states[e] ? h.states[e].state : "").join("|") + (/* @__PURE__ */ new Date()).getHours();
+      if (k !== this._k) {
+        this._k = k;
+        this._render();
+      }
+    }
+    _render() {
+      const h = this._h, c = this._c;
+      const st = (e) => h.states[e] ? h.states[e].state : "";
+      const list = (s) => !s || s === "Nessuna raccolta" || s === "unknown" || s === "unavailable" ? [] : s.split(" + ").map((x) => x.trim());
+      const hr = (/* @__PURE__ */ new Date()).getHours();
+      const showToday = hr < 8 && list(st(c.today)).length;
+      const main = showToday ? list(st(c.today)) : list(st(c.tomorrow));
+      const label = showToday ? "Oggi" : "Domani";
+      const week = st(c.week).split(" \xB7 ").filter(Boolean).map((x) => {
+        const [d, t] = x.split(": ");
+        return { d, t: list(t) };
+      });
+      let top;
+      if (main.length) {
+        top = '<div class="hd"><div class="k">Rifiuti \xB7 ' + label + '</div><div class="wh"><ha-icon icon="mdi:clock-outline"></ha-icon>' + (showToday ? "Passano stamattina" : "Esponi stasera dopo le 19") + '</div></div><div class="bns">' + main.map((t) => wBanner(t, main.length > 1)).join("") + "</div>";
+      } else {
+        const nx = week.find((x) => x.t.length);
+        top = '<div class="hd"><div class="k">Rifiuti \xB7 Domani</div>' + (nx ? '<div class="wh">Prossima: <b>' + esc(nx.t.join(" + ")) + "</b> " + esc(nx.d) + "</div>" : "") + '</div><div class="bn none"><div class="l"><div class="rc"><ha-icon icon="mdi:calendar-check-outline"></ha-icon>CALENDARIO</div>' + wIcon("Secco", 50) + '</div><div class="r"><div class="nm">Nessuna raccolta</div></div></div>';
+      }
+      const days = [];
+      for (let i = 1; i <= 7 && days.length < c.days; i++) {
+        const d = /* @__PURE__ */ new Date();
+        d.setDate(d.getDate() + i);
+        if (!showToday && i === 1 && main.length) continue;
+        const key = GG[d.getDay()] + " " + d.getDate();
+        const f = week.find((x) => x.d === key);
+        days.push({ g: GG[d.getDay()], n: d.getDate(), t: f ? f.t : [] });
+      }
+      const wk = '<div class="wk">' + days.map((x) => '<div class="d' + (x.t.length ? "" : " none") + '"><div class="g">' + x.g + '</div><div class="n">' + x.n + "</div>" + (x.t.length ? x.t.map((t) => '<div class="p" title="' + esc(t) + '" style="background:' + ((WASTE[t] || {}).b || "#475569") + '">' + wIcon(t, 30) + "</div>").join("") + '<div class="t">' + esc(x.t.join(" + ")) + "</div>" : '<div class="x">\u2014</div>') + "</div>").join("") + "</div>";
+      this.shadowRoot.innerHTML = "<style>" + CSS_W + "</style><ha-card>" + top + wk + "</ha-card>";
+      this.shadowRoot.querySelector("ha-card").onclick = () => {
+        const e = new Event("hass-more-info", { bubbles: true, composed: true });
+        e.detail = { entityId: c.week };
+        this.dispatchEvent(e);
+      };
+    }
   }
-}
-
-/* ---------- batterie ---------- */
-const CSS_B = `
+  const CSS_B = `
 ha-card{background:${BG};border:1px solid rgba(140,200,255,.10);border-radius:20px;color:#e6edf7;font-family:var(--primary-font-family,inherit);padding:16px;position:relative;overflow:hidden}
 ha-card.dis{border-color:rgba(251,191,36,.30)}ha-card.chg{border-color:rgba(52,211,153,.34);box-shadow:0 10px 30px rgba(16,185,129,.12)}
 .hd{display:flex;align-items:flex-start;gap:12px}
@@ -319,110 +381,141 @@ ha-card.dis{border-color:rgba(251,191,36,.30)}ha-card.chg{border-color:rgba(52,2
 @keyframes flow{from{transform:translateY(10px);opacity:0}30%{opacity:1}to{transform:translateY(-26px);opacity:0}}
 @keyframes flowd{from{transform:translateY(-10px);opacity:0}30%{opacity:1}to{transform:translateY(26px);opacity:0}}
 `;
-const fmtKW = (w) => (Math.abs(w) / 1000).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-const fmtKWh = (v) => (isNaN(v) ? '–' : v.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
-function batSVG(soc, w, floor, res, held, uid) {
-  const H = 76, y0 = 14, x = 8, wd = 42;
-  const s = isNaN(soc) ? 0 : Math.max(0, Math.min(100, soc));
-  const fh = H * s / 100, fy = y0 + H - fh;
-  const col = s <= floor + 2 ? ['#ef4444', '#7f1d1d'] : s < 30 ? ['#f59e0b', '#78350f'] : ['#34d399', '#065f46'];
-  const ln = (p, c, dash) => { const yy = y0 + H - H * p / 100; return `<line x1="${x - 3}" x2="${x + wd + 3}" y1="${yy}" y2="${yy}" stroke="${c}" stroke-width="1.4" ${dash ? 'stroke-dasharray="3 2.5"' : ''}/>`; };
-  const chg = w > 30, dis = w < -30;
-  const bub = (chg || dis) ? [16, 29, 42].map((cx, i) => `<circle cx="${cx}" cy="${chg ? fy + fh - 6 : fy + 8}" r="2.2" fill="rgba(255,255,255,.75)" class="${chg ? 'flow' : 'flowd'}" style="animation-delay:${(i * .5).toFixed(1)}s"/>`).join('') : '';
-  return `<svg viewBox="0 0 58 96"><defs><linearGradient id="bf${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col[0]}"/><stop offset="1" stop-color="${col[1]}"/></linearGradient>
+  const fmtKW = (w) => (Math.abs(w) / 1e3).toLocaleString("it-IT", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const fmtKWh = (v) => isNaN(v) ? "\u2013" : v.toLocaleString("it-IT", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  function batSVG(soc, w, floor, res, held, uid) {
+    const H = 76, y0 = 14, x = 8, wd = 42;
+    const s = isNaN(soc) ? 0 : Math.max(0, Math.min(100, soc));
+    const fh = H * s / 100, fy = y0 + H - fh;
+    const col = s <= floor + 2 ? ["#ef4444", "#7f1d1d"] : s < 30 ? ["#f59e0b", "#78350f"] : ["#34d399", "#065f46"];
+    const ln = (p, c, dash) => {
+      const yy = y0 + H - H * p / 100;
+      return `<line x1="${x - 3}" x2="${x + wd + 3}" y1="${yy}" y2="${yy}" stroke="${c}" stroke-width="1.4" ${dash ? 'stroke-dasharray="3 2.5"' : ""}/>`;
+    };
+    const chg = w > 30, dis = w < -30;
+    const bub = chg || dis ? [16, 29, 42].map((cx, i) => `<circle cx="${cx}" cy="${chg ? fy + fh - 6 : fy + 8}" r="2.2" fill="rgba(255,255,255,.75)" class="${chg ? "flow" : "flowd"}" style="animation-delay:${(i * 0.5).toFixed(1)}s"/>`).join("") : "";
+    return `<svg viewBox="0 0 58 96"><defs><linearGradient id="bf${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col[0]}"/><stop offset="1" stop-color="${col[1]}"/></linearGradient>
   <clipPath id="bc${uid}"><rect x="${x}" y="${y0}" width="${wd}" height="${H}" rx="7"/></clipPath></defs>
   <rect x="21" y="6" width="16" height="8" rx="2.5" fill="#2a3640"/>
   <rect x="${x - 2}" y="${y0 - 2}" width="${wd + 4}" height="${H + 4}" rx="9" fill="#141c22" stroke="rgba(255,255,255,.14)" stroke-width="1.4"/>
   <g clip-path="url(#bc${uid})"><rect x="${x}" y="${fy}" width="${wd}" height="${fh}" fill="url(#bf${uid})" style="filter:drop-shadow(0 0 6px ${col[0]}66)"/>
   <rect x="${x}" y="${fy}" width="${wd}" height="2.5" fill="rgba(255,255,255,.35)"/>${bub}
   <rect x="${x + 4}" y="${y0}" width="6" height="${H}" fill="rgba(255,255,255,.07)"/></g>
-  ${ln(floor, 'rgba(248,113,113,.75)', true)}${res != null ? ln(res, '#fbbf24', false) : ''}
-  ${held ? `<g transform="translate(29 ${y0 + H / 2})"><circle r="10" fill="rgba(15,23,42,.85)" stroke="#fdba74"/><path d="M-4 -1v-2.5a4 4 0 0 1 8 0V-1M-5.5 -1h11v7h-11z" fill="none" stroke="#fdba74" stroke-width="1.6" stroke-linejoin="round"/></g>` : ''}
+  ${ln(floor, "rgba(248,113,113,.75)", true)}${res != null ? ln(res, "#fbbf24", false) : ""}
+  ${held ? `<g transform="translate(29 ${y0 + H / 2})"><circle r="10" fill="rgba(15,23,42,.85)" stroke="#fdba74"/><path d="M-4 -1v-2.5a4 4 0 0 1 8 0V-1M-5.5 -1h11v7h-11z" fill="none" stroke="#fdba74" stroke-width="1.6" stroke-linejoin="round"/></g>` : ""}
   </svg>`;
-}
-class BatteryCard extends HTMLElement {
-  setConfig(c) {
-    this._c = Object.assign({
-      name: 'Batterie',
-      batteries: [
-        { name: 'Batteria 1', soc: 'sensor.batterie_stato_della_capacita', power: 'sensor.batterie_potenza_di_carica_scarica', mode: 'select.batterie_modalita_di_funzionamento_batteria', grid: 'switch.batterie_carica_dalla_rete', dmax: 'number.inverter_potenza_massima_di_scaricamento_batteria', floor: 'number.batterie_termine_dello_scaricamento_batteria_soc', top: 'number.inverter_termine_della_carica_batteria_soc', cday: 'sensor.batterie_carica_giornaliera', dday: 'sensor.batterie_scarica_giornaliera' },
-        { name: 'Batteria 2', soc: 'sensor.batterie_stato_della_capacita_2', power: 'sensor.batterie_potenza_di_carica_scarica_2', mode: 'select.batterie_modalita_di_funzionamento_batteria_2', grid: 'switch.batterie_carica_dalla_rete_2', dmax: 'number.inverter_potenza_massima_di_scaricamento_batteria_2', floor: 'number.batterie_termine_dello_scaricamento_batteria_soc_2', top: 'number.inverter_termine_della_carica_batteria_soc_2', cday: 'sensor.batterie_carica_giornaliera_2', dday: 'sensor.batterie_scarica_giornaliera_2' }
-      ],
-      reserve: 'input_boolean.batterie_riserva_per_la_sera', threshold: 'input_number.batterie_soglia_riserva', release: 'input_datetime.batterie_rilascio_riserva',
-      thresholds: [25, 30, 35, 40, 50], releases: ['17:30', '18:00', '18:30', '19:00']
-    }, c);
   }
-  getCardSize() { return 6; }
-  getGridOptions() { return { columns: 12, rows: 'auto' }; }
-  set hass(h) {
-    this._h = h;
-    if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
-    const c = this._c, ids = [c.reserve, c.threshold, c.release];
-    c.batteries.forEach((b) => ids.push(b.soc, b.power, b.mode, b.grid, b.dmax, b.floor, b.top, b.cday, b.dday));
-    const key = ids.map((e) => (h.states[e] ? h.states[e].state : '')).join('|');
-    if (key !== this._k) { this._k = key; this._render(); }
+  class BatteryCard extends HTMLElement {
+    setConfig(c) {
+      this._c = Object.assign({
+        name: "Batterie",
+        batteries: [
+          { name: "Batteria 1", soc: "sensor.batterie_stato_della_capacita", power: "sensor.batterie_potenza_di_carica_scarica", mode: "select.batterie_modalita_di_funzionamento_batteria", grid: "switch.batterie_carica_dalla_rete", dmax: "number.inverter_potenza_massima_di_scaricamento_batteria", floor: "number.batterie_termine_dello_scaricamento_batteria_soc", top: "number.inverter_termine_della_carica_batteria_soc", cday: "sensor.batterie_carica_giornaliera", dday: "sensor.batterie_scarica_giornaliera" },
+          { name: "Batteria 2", soc: "sensor.batterie_stato_della_capacita_2", power: "sensor.batterie_potenza_di_carica_scarica_2", mode: "select.batterie_modalita_di_funzionamento_batteria_2", grid: "switch.batterie_carica_dalla_rete_2", dmax: "number.inverter_potenza_massima_di_scaricamento_batteria_2", floor: "number.batterie_termine_dello_scaricamento_batteria_soc_2", top: "number.inverter_termine_della_carica_batteria_soc_2", cday: "sensor.batterie_carica_giornaliera_2", dday: "sensor.batterie_scarica_giornaliera_2" }
+        ],
+        reserve: "input_boolean.batterie_riserva_per_la_sera",
+        threshold: "input_number.batterie_soglia_riserva",
+        release: "input_datetime.batterie_rilascio_riserva",
+        thresholds: [25, 30, 35, 40, 50],
+        releases: ["17:30", "18:00", "18:30", "19:00"]
+      }, c);
+    }
+    getCardSize() {
+      return 6;
+    }
+    getGridOptions() {
+      return { columns: 12, rows: "auto" };
+    }
+    set hass(h) {
+      this._h = h;
+      if (!this.shadowRoot) this.attachShadow({ mode: "open" });
+      const c = this._c, ids = [c.reserve, c.threshold, c.release];
+      c.batteries.forEach((b) => ids.push(b.soc, b.power, b.mode, b.grid, b.dmax, b.floor, b.top, b.cday, b.dday));
+      const key = ids.map((e) => h.states[e] ? h.states[e].state : "").join("|");
+      if (key !== this._k) {
+        this._k = key;
+        this._render();
+      }
+    }
+    _s(id) {
+      const s = this._h.states[id];
+      return s ? s.state : void 0;
+    }
+    _n(id) {
+      return parseFloat(this._s(id));
+    }
+    _render() {
+      const c = this._c, B = c.batteries;
+      const d = B.map((b, i) => ({ b, i, soc: this._n(b.soc), w: this._n(b.power) || 0, floor: isNaN(this._n(b.floor)) ? 15 : this._n(b.floor), top: this._n(b.top), held: this._n(b.dmax) === 0, mode: this._s(b.mode), grid: this._s(b.grid) === "on" }));
+      const resOn = this._s(c.reserve) === "on", thr = this._n(c.threshold) || 35, rel = (this._s(c.release) || "18:00").slice(0, 5);
+      const tot = d.reduce((a, x) => a + x.w, 0), socs = d.map((x) => x.soc).filter((v) => !isNaN(v));
+      const avg = socs.length ? Math.round(socs.reduce((a, v) => a + v, 0) / socs.length) : NaN;
+      const anyHeld = d.some((x) => x.held);
+      let cls, big, sub;
+      if (tot > 60) {
+        cls = "chg";
+        big = fmtKW(tot) + "<small>kW in carica</small>";
+        sub = "Il fotovoltaico sta riempiendo le batterie";
+      } else if (tot < -60) {
+        cls = "dis";
+        big = fmtKW(tot) + "<small>kW alla casa</small>";
+        sub = "Le batterie stanno alimentando la casa";
+      } else if (anyHeld) {
+        cls = "hold";
+        big = "Riserva trattenuta";
+        sub = "La scarica riprende alle " + rel + " o se i consumi salgono";
+      } else {
+        cls = "idle";
+        big = "A riposo";
+        sub = avg <= Math.max(...d.map((x) => x.floor)) + 1 ? "Scariche: si ricaricano col sole" : avg >= 99 ? "Cariche al massimo" : "Nessuno scambio in questo momento";
+      }
+      if (anyHeld && cls !== "hold") sub += " \xB7 riserva trattenuta su una batteria";
+      const cday = d.reduce((a, x) => a + (this._n(x.b.cday) || 0), 0), dday = d.reduce((a, x) => a + (this._n(x.b.dday) || 0), 0);
+      const cells = d.map((x) => {
+        const ws = x.w > 30 ? '<ha-icon icon="mdi:arrow-up-bold" style="color:#6ee7b7"></ha-icon>' + fmtKW(x.w) + " kW" : x.w < -30 ? '<ha-icon icon="mdi:arrow-down-bold" style="color:#fcd34d"></ha-icon>' + fmtKW(x.w) + " kW" : '<ha-icon icon="mdi:pause"></ha-icon>ferma';
+        return '<div class="cell" data-e="' + x.b.soc + '">' + batSVG(x.soc, x.w, x.floor, resOn ? thr : null, x.held, x.i) + '<div class="ci"><div class="n">' + esc(x.b.name) + '</div><div class="p">' + (isNaN(x.soc) ? "\u2013" : Math.round(x.soc)) + '<small>%</small></div><div class="w">' + ws + "</div>" + (x.held ? '<span class="tg">riserva</span>' : "") + "</div></div>";
+      }).join("");
+      const M = [["maximise_self_consumption", "Autoconsumo"], ["time_of_use_luna2000", "Fasce orarie"], ["fully_fed_to_grid", "Tutto in rete"]];
+      const mode = d[0].mode, same = d.every((x) => x.mode === mode);
+      const seg = M.map(([v, l]) => '<button data-mode="' + v + '" class="' + (same && mode === v ? "on" : "") + '">' + l + "</button>").join("");
+      const grid = d.some((x) => x.grid);
+      const chips = c.thresholds.map((t) => '<button data-thr="' + t + '" class="' + (Math.round(thr) === t ? "on" : "") + '">' + t + "%</button>").join("");
+      const rels = c.releases.map((t) => '<button data-rel="' + t + '" class="' + (rel === t ? "on" : "") + '">' + t + "</button>").join("");
+      const modeTxt = !same ? "Le due batterie hanno modalit\xE0 diverse" : mode === "maximise_self_consumption" ? "Caricano col sole, scaricano quando la casa consuma" : mode === "time_of_use_luna2000" ? "Seguono il calendario a fasce impostato nell'inverter" : "Il fotovoltaico va in rete, le batterie restano ferme";
+      this.shadowRoot.innerHTML = "<style>" + CSS_B + '</style><ha-card class="' + cls + '"><div class="hd"><div class="t"><div class="lb">' + esc(c.name) + '</div><div class="big">' + big + '</div><div class="sub">' + esc(sub) + '</div></div><div class="avg"><b>' + (isNaN(avg) ? "\u2013" : avg) + '<small style="font-size:15px;color:#9fb3bd">%</small></b><span>media</span></div></div><div class="cells">' + cells + "</div>" + (c.info ? "" : '<div class="sec"><div class="row"><div class="k"><b>Modalit\xE0</b><span>' + esc(modeTxt) + '</span></div></div><div class="seg">' + seg + '</div></div><div class="sec"><div class="row"><div class="k"><b>Riserva per la sera</b><span>' + (resOn ? "Tiene almeno il " + Math.round(thr) + "% fino alle " + rel + ", poi la rilascia per la cena" : "Le batterie scaricano liberamente fino al " + Math.round(d[0].floor) + "%") + '</span></div><button class="sw amber' + (resOn ? " on" : "") + '" data-t="res"></button></div><div class="' + (resOn ? "" : "dim") + '"><div class="note"><ha-icon icon="mdi:shield-flash-outline"></ha-icon>Se il prelievo supera 8 kW la riserva si libera subito, per non far staccare il contatore</div><div class="chips"><span class="cap">Tieni</span>' + chips + '</div><div class="chips"><span class="cap">Rilascia alle</span>' + rels + '</div></div></div><div class="sec"><div class="row"><div class="k"><b>Carica dalla rete</b><span>' + (grid ? "Attiva: le batterie possono caricarsi anche dalla rete" : "Spenta: con la tariffa monoraria non fa risparmiare") + '</span></div><button class="sw' + (grid ? " on" : "") + '" data-t="grid"></button></div></div>') + '<div class="ft"><span><ha-icon icon="mdi:calendar-today"></ha-icon>oggi caricati ' + fmtKWh(cday) + " kWh \xB7 scaricati " + fmtKWh(dday) + ' kWh</span><span><ha-icon icon="mdi:arrow-expand-vertical"></ha-icon>lavorano tra ' + Math.round(d[0].floor) + "% e " + (isNaN(d[0].top) ? "\u2013" : Math.round(d[0].top)) + "%</span></div></ha-card>";
+      const R = this.shadowRoot, h = this._h;
+      const confirm = (el, msg) => {
+        if (el.classList.contains("warn")) return true;
+        el.classList.add("warn");
+        const o = el.title;
+        el.title = msg;
+        setTimeout(() => {
+          el.classList.remove("warn");
+          el.title = o;
+        }, 3e3);
+        return false;
+      };
+      R.querySelectorAll("[data-mode]").forEach((el) => el.onclick = () => {
+        const v = el.dataset.mode;
+        if (same && mode === v) return;
+        if (v !== "maximise_self_consumption" && !confirm(el, "Tocca di nuovo per confermare")) return;
+        B.forEach((b) => h.callService("select", "select_option", { entity_id: b.mode, option: v }));
+      });
+      R.querySelectorAll("[data-thr]").forEach((el) => el.onclick = () => h.callService("input_number", "set_value", { entity_id: c.threshold, value: +el.dataset.thr }));
+      R.querySelectorAll("[data-rel]").forEach((el) => el.onclick = () => h.callService("input_datetime", "set_datetime", { entity_id: c.release, time: el.dataset.rel + ":00" }));
+      R.querySelector('[data-t="res"]').onclick = () => h.callService("input_boolean", resOn ? "turn_off" : "turn_on", { entity_id: c.reserve });
+      R.querySelector('[data-t="grid"]').onclick = (ev) => {
+        if (!grid && !confirm(ev.currentTarget, "Tocca di nuovo per attivare")) return;
+        B.forEach((b) => h.callService("switch", grid ? "turn_off" : "turn_on", { entity_id: b.grid }));
+      };
+      R.querySelectorAll(".cell").forEach((el) => el.onclick = () => {
+        const e = new Event("hass-more-info", { bubbles: true, composed: true });
+        e.detail = { entityId: el.dataset.e };
+        this.dispatchEvent(e);
+      });
+    }
   }
-  _s(id) { const s = this._h.states[id]; return s ? s.state : undefined; }
-  _n(id) { return parseFloat(this._s(id)); }
-  _render() {
-    const c = this._c, B = c.batteries;
-    const d = B.map((b, i) => ({ b, i, soc: this._n(b.soc), w: this._n(b.power) || 0, floor: isNaN(this._n(b.floor)) ? 15 : this._n(b.floor), top: this._n(b.top), held: this._n(b.dmax) === 0, mode: this._s(b.mode), grid: this._s(b.grid) === 'on' }));
-    const resOn = this._s(c.reserve) === 'on', thr = this._n(c.threshold) || 35, rel = (this._s(c.release) || '18:00').slice(0, 5);
-    const tot = d.reduce((a, x) => a + x.w, 0), socs = d.map((x) => x.soc).filter((v) => !isNaN(v));
-    const avg = socs.length ? Math.round(socs.reduce((a, v) => a + v, 0) / socs.length) : NaN;
-    const anyHeld = d.some((x) => x.held);
-    let cls, big, sub;
-    if (tot > 60) { cls = 'chg'; big = fmtKW(tot) + '<small>kW in carica</small>'; sub = 'Il fotovoltaico sta riempiendo le batterie'; }
-    else if (tot < -60) { cls = 'dis'; big = fmtKW(tot) + '<small>kW alla casa</small>'; sub = 'Le batterie stanno alimentando la casa'; }
-    else if (anyHeld) { cls = 'hold'; big = 'Riserva trattenuta'; sub = 'La scarica riprende alle ' + rel + ' o se i consumi salgono'; }
-    else { cls = 'idle'; big = 'A riposo'; sub = avg <= Math.max(...d.map((x) => x.floor)) + 1 ? 'Scariche: si ricaricano col sole' : avg >= 99 ? 'Cariche al massimo' : 'Nessuno scambio in questo momento'; }
-    if (anyHeld && cls !== 'hold') sub += ' · riserva trattenuta su una batteria';
-    const cday = d.reduce((a, x) => a + (this._n(x.b.cday) || 0), 0), dday = d.reduce((a, x) => a + (this._n(x.b.dday) || 0), 0);
-    const cells = d.map((x) => {
-      const ws = x.w > 30 ? '<ha-icon icon="mdi:arrow-up-bold" style="color:#6ee7b7"></ha-icon>' + fmtKW(x.w) + ' kW' : x.w < -30 ? '<ha-icon icon="mdi:arrow-down-bold" style="color:#fcd34d"></ha-icon>' + fmtKW(x.w) + ' kW' : '<ha-icon icon="mdi:pause"></ha-icon>ferma';
-      return '<div class="cell" data-e="' + x.b.soc + '">' + batSVG(x.soc, x.w, x.floor, resOn ? thr : null, x.held, x.i)
-        + '<div class="ci"><div class="n">' + esc(x.b.name) + '</div><div class="p">' + (isNaN(x.soc) ? '–' : Math.round(x.soc)) + '<small>%</small></div><div class="w">' + ws + '</div>'
-        + (x.held ? '<span class="tg">riserva</span>' : '') + '</div></div>';
-    }).join('');
-    const M = [['maximise_self_consumption', 'Autoconsumo'], ['time_of_use_luna2000', 'Fasce orarie'], ['fully_fed_to_grid', 'Tutto in rete']];
-    const mode = d[0].mode, same = d.every((x) => x.mode === mode);
-    const seg = M.map(([v, l]) => '<button data-mode="' + v + '" class="' + (same && mode === v ? 'on' : '') + '">' + l + '</button>').join('');
-    const grid = d.some((x) => x.grid);
-    const chips = c.thresholds.map((t) => '<button data-thr="' + t + '" class="' + (Math.round(thr) === t ? 'on' : '') + '">' + t + '%</button>').join('');
-    const rels = c.releases.map((t) => '<button data-rel="' + t + '" class="' + (rel === t ? 'on' : '') + '">' + t + '</button>').join('');
-    const modeTxt = !same ? 'Le due batterie hanno modalità diverse' : mode === 'maximise_self_consumption' ? 'Caricano col sole, scaricano quando la casa consuma' : mode === 'time_of_use_luna2000' ? 'Seguono il calendario a fasce impostato nell\'inverter' : 'Il fotovoltaico va in rete, le batterie restano ferme';
-    this.shadowRoot.innerHTML = '<style>' + CSS_B + '</style><ha-card class="' + cls + '">'
-      + '<div class="hd"><div class="t"><div class="lb">' + esc(c.name) + '</div><div class="big">' + big + '</div><div class="sub">' + esc(sub) + '</div></div>'
-      + '<div class="avg"><b>' + (isNaN(avg) ? '–' : avg) + '<small style="font-size:15px;color:#9fb3bd">%</small></b><span>media</span></div></div>'
-      + '<div class="cells">' + cells + '</div>'
-      + (c.info ? '' : '<div class="sec"><div class="row"><div class="k"><b>Modalità</b><span>' + esc(modeTxt) + '</span></div></div><div class="seg">' + seg + '</div></div>'
-      + '<div class="sec"><div class="row"><div class="k"><b>Riserva per la sera</b><span>' + (resOn ? 'Tiene almeno il ' + Math.round(thr) + '% fino alle ' + rel + ', poi la rilascia per la cena' : 'Le batterie scaricano liberamente fino al ' + Math.round(d[0].floor) + '%') + '</span></div><button class="sw amber' + (resOn ? ' on' : '') + '" data-t="res"></button></div>'
-      + '<div class="' + (resOn ? '' : 'dim') + '"><div class="note"><ha-icon icon="mdi:shield-flash-outline"></ha-icon>Se il prelievo supera 8 kW la riserva si libera subito, per non far staccare il contatore</div><div class="chips"><span class="cap">Tieni</span>' + chips + '</div><div class="chips"><span class="cap">Rilascia alle</span>' + rels + '</div></div></div>'
-      + '<div class="sec"><div class="row"><div class="k"><b>Carica dalla rete</b><span>' + (grid ? 'Attiva: le batterie possono caricarsi anche dalla rete' : 'Spenta: con la tariffa monoraria non fa risparmiare') + '</span></div><button class="sw' + (grid ? ' on' : '') + '" data-t="grid"></button></div></div>')
-      + '<div class="ft"><span><ha-icon icon="mdi:calendar-today"></ha-icon>oggi caricati ' + fmtKWh(cday) + ' kWh · scaricati ' + fmtKWh(dday) + ' kWh</span>'
-      + '<span><ha-icon icon="mdi:arrow-expand-vertical"></ha-icon>lavorano tra ' + Math.round(d[0].floor) + '% e ' + (isNaN(d[0].top) ? '–' : Math.round(d[0].top)) + '%</span></div>'
-      + '</ha-card>';
-    const R = this.shadowRoot, h = this._h;
-    const confirm = (el, msg) => { if (el.classList.contains('warn')) return true; el.classList.add('warn'); const o = el.title; el.title = msg; setTimeout(() => { el.classList.remove('warn'); el.title = o; }, 3000); return false; };
-    R.querySelectorAll('[data-mode]').forEach((el) => el.onclick = () => {
-      const v = el.dataset.mode; if (same && mode === v) return;
-      if (v !== 'maximise_self_consumption' && !confirm(el, 'Tocca di nuovo per confermare')) return;
-      B.forEach((b) => h.callService('select', 'select_option', { entity_id: b.mode, option: v }));
-    });
-    R.querySelectorAll('[data-thr]').forEach((el) => el.onclick = () => h.callService('input_number', 'set_value', { entity_id: c.threshold, value: +el.dataset.thr }));
-    R.querySelectorAll('[data-rel]').forEach((el) => el.onclick = () => h.callService('input_datetime', 'set_datetime', { entity_id: c.release, time: el.dataset.rel + ':00' }));
-    R.querySelector('[data-t="res"]').onclick = () => h.callService('input_boolean', resOn ? 'turn_off' : 'turn_on', { entity_id: c.reserve });
-    R.querySelector('[data-t="grid"]').onclick = (ev) => {
-      if (!grid && !confirm(ev.currentTarget, 'Tocca di nuovo per attivare')) return;
-      B.forEach((b) => h.callService('switch', grid ? 'turn_off' : 'turn_on', { entity_id: b.grid }));
-    };
-    R.querySelectorAll('.cell').forEach((el) => el.onclick = () => { const e = new Event('hass-more-info', { bubbles: true, composed: true }); e.detail = { entityId: el.dataset.e }; this.dispatchEvent(e); });
-  }
-}
-
-
-/* ---------- protezione contatore: ordine di sospensione ---------- */
-const CSS_P = `
+  const CSS_P = `
 ha-card{background:${BG};border:1px solid rgba(140,200,255,.10);border-radius:20px;color:#e6edf7;font-family:var(--primary-font-family,inherit);padding:16px;position:relative;overflow:hidden}
 ha-card.act{border-color:rgba(248,113,113,.45);box-shadow:0 10px 30px rgba(220,38,38,.15)}
 .lb{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8fa3ad}
@@ -458,72 +551,130 @@ ha-card.act{border-color:rgba(248,113,113,.45);box-shadow:0 10px 30px rgba(220,3
 .flash{animation:fl .6s ease}
 @keyframes fl{0%{background:rgba(245,158,11,.25)}100%{background:rgba(255,255,255,.035)}}
 `;
-const LOADS = {
-  auto: { n: 'Ricarica Audi A3', d: 'Prima scende al minimo (6 A), poi va in pausa', i: 'mdi:ev-station', on: (h) => parseFloat(h.states['sensor.auto_potenza_ricarica']?.state) > 0.1, p: (h) => { const v = parseFloat(h.states['sensor.auto_potenza_ricarica']?.state); return v > 0.1 ? v.toLocaleString('it-IT', { maximumFractionDigits: 1 }) + ' kW' : ''; } },
-  acqua: { n: 'Acqua calda', d: 'La pompa di calore abbassa la temperatura del boiler', i: 'mdi:water-boiler', on: (h) => !['off', 'unavailable'].includes(h.states['water_heater.pompa_di_calore']?.state) },
-  split: { n: 'Condizionatori Samsung', d: 'Studio e cucina nuova', i: 'mdi:air-conditioner', on: (h) => ['climate.studio_condizionatore', 'climate.cucina_nuova_condizionatore_cucina_nuova'].some((e) => !['off', 'unavailable', undefined].includes(h.states[e]?.state)) },
-  clima: { n: 'Climatizzatori stanze', d: 'Cucina, soggiorno, camere e palestra', i: 'mdi:snowflake-thermometer', on: (h) => ['cucina', 'soggiorno', 'umberto', 'lorenzo', 'manu', 'palestra'].some((e) => !['off', 'unavailable', undefined].includes(h.states['climate.' + e]?.state)) },
-  asciugatrice: { n: 'Asciugatrice', d: 'Spegne la presa: il programma andrà riavviato', i: 'mdi:tumble-dryer', on: (h) => parseFloat(h.states['sensor.asciugatrice_power']?.state) > 100, p: (h) => { const v = parseFloat(h.states['sensor.asciugatrice_power']?.state); return v > 100 ? Math.round(v) + ' W' : ''; } },
-  lavastoviglie: { n: 'Lavastoviglie', d: 'Il programma viene interrotto: andrà riavviato a mano', i: 'mdi:dishwasher', on: (h) => h.states['sensor.cucina_lavastoviglie_stato_di_funzionamento']?.state === 'run' },
-  forno: { n: 'Forno e microonde', d: 'La cottura viene fermata: andrà riavviata a mano', i: 'mdi:stove', on: (h) => ['sensor.cucina_forno_machine_state', 'sensor.cucina_nuova_forno_con_touch_screen_machine_state'].some((e) => h.states[e]?.state === 'running') },
-  riscaldamento: { n: 'Riscaldamento a pompa di calore', d: 'Radiatori e pavimento si fermano per qualche minuto', i: 'mdi:radiator', on: (h) => ['climate.pompa_di_calore_radiatori', 'climate.pompa_di_calore_pavimento'].some((e) => !['off', 'unavailable', undefined].includes(h.states[e]?.state)) }
-};
-class PriorityCard extends HTMLElement {
-  setConfig(c) { this._c = Object.assign({ order: 'input_text.protezione_contatore_ordine_di_sospensione', last: 'input_text.protezione_contatore_ultimo_intervento', active: 'input_boolean.carichi_ridotti_protezione_contatore', threshold: 'input_number.soglia_protezione_contatore', power: 'sensor.alfa_potenza_importata' }, c); }
-  getCardSize() { return 7; }
-  getGridOptions() { return { columns: 12, rows: 'auto' }; }
-  set hass(h) {
-    this._h = h; if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
-    const c = this._c;
-    const key = [c.order, c.last, c.active, c.threshold, c.power].map((e) => h.states[e]?.state).join('|') + '|' + Object.keys(LOADS).map((k) => LOADS[k].on(h) + (LOADS[k].p ? LOADS[k].p(h) : '')).join('|');
-    if (key !== this._k) { this._k = key; this._render(); }
+  const LOADS = {
+    auto: { n: "Ricarica Audi A3", d: "Prima scende al minimo (6 A), poi va in pausa", i: "mdi:ev-station", on: (h) => {
+      var _a;
+      return parseFloat((_a = h.states["sensor.auto_potenza_ricarica"]) == null ? void 0 : _a.state) > 0.1;
+    }, p: (h) => {
+      var _a;
+      const v = parseFloat((_a = h.states["sensor.auto_potenza_ricarica"]) == null ? void 0 : _a.state);
+      return v > 0.1 ? v.toLocaleString("it-IT", { maximumFractionDigits: 1 }) + " kW" : "";
+    } },
+    acqua: { n: "Acqua calda", d: "La pompa di calore abbassa la temperatura del boiler", i: "mdi:water-boiler", on: (h) => {
+      var _a;
+      return !["off", "unavailable"].includes((_a = h.states["water_heater.pompa_di_calore"]) == null ? void 0 : _a.state);
+    } },
+    split: { n: "Condizionatori Samsung", d: "Studio e cucina nuova", i: "mdi:air-conditioner", on: (h) => ["climate.studio_condizionatore", "climate.cucina_nuova_condizionatore_cucina_nuova"].some((e) => {
+      var _a;
+      return !["off", "unavailable", void 0].includes((_a = h.states[e]) == null ? void 0 : _a.state);
+    }) },
+    clima: { n: "Climatizzatori stanze", d: "Cucina, soggiorno, camere e palestra", i: "mdi:snowflake-thermometer", on: (h) => ["cucina", "soggiorno", "umberto", "lorenzo", "manu", "palestra"].some((e) => {
+      var _a;
+      return !["off", "unavailable", void 0].includes((_a = h.states["climate." + e]) == null ? void 0 : _a.state);
+    }) },
+    asciugatrice: { n: "Asciugatrice", d: "Spegne la presa: il programma andr\xE0 riavviato", i: "mdi:tumble-dryer", on: (h) => {
+      var _a;
+      return parseFloat((_a = h.states["sensor.asciugatrice_power"]) == null ? void 0 : _a.state) > 100;
+    }, p: (h) => {
+      var _a;
+      const v = parseFloat((_a = h.states["sensor.asciugatrice_power"]) == null ? void 0 : _a.state);
+      return v > 100 ? Math.round(v) + " W" : "";
+    } },
+    lavastoviglie: { n: "Lavastoviglie", d: "Il programma viene interrotto: andr\xE0 riavviato a mano", i: "mdi:dishwasher", on: (h) => {
+      var _a;
+      return ((_a = h.states["sensor.cucina_lavastoviglie_stato_di_funzionamento"]) == null ? void 0 : _a.state) === "run";
+    } },
+    forno: { n: "Forno e microonde", d: "La cottura viene fermata: andr\xE0 riavviata a mano", i: "mdi:stove", on: (h) => ["sensor.cucina_forno_machine_state", "sensor.cucina_nuova_forno_con_touch_screen_machine_state"].some((e) => {
+      var _a;
+      return ((_a = h.states[e]) == null ? void 0 : _a.state) === "running";
+    }) },
+    riscaldamento: { n: "Riscaldamento a pompa di calore", d: "Radiatori e pavimento si fermano per qualche minuto", i: "mdi:radiator", on: (h) => ["climate.pompa_di_calore_radiatori", "climate.pompa_di_calore_pavimento"].some((e) => {
+      var _a;
+      return !["off", "unavailable", void 0].includes((_a = h.states[e]) == null ? void 0 : _a.state);
+    }) }
+  };
+  class PriorityCard extends HTMLElement {
+    setConfig(c) {
+      this._c = Object.assign({ order: "input_text.protezione_contatore_ordine_di_sospensione", last: "input_text.protezione_contatore_ultimo_intervento", active: "input_boolean.carichi_ridotti_protezione_contatore", threshold: "input_number.soglia_protezione_contatore", power: "sensor.alfa_potenza_importata" }, c);
+    }
+    getCardSize() {
+      return 7;
+    }
+    getGridOptions() {
+      return { columns: 12, rows: "auto" };
+    }
+    set hass(h) {
+      this._h = h;
+      if (!this.shadowRoot) this.attachShadow({ mode: "open" });
+      const c = this._c;
+      const key = [c.order, c.last, c.active, c.threshold, c.power].map((e) => {
+        var _a;
+        return (_a = h.states[e]) == null ? void 0 : _a.state;
+      }).join("|") + "|" + Object.keys(LOADS).map((k) => LOADS[k].on(h) + (LOADS[k].p ? LOADS[k].p(h) : "")).join("|");
+      if (key !== this._k) {
+        this._k = key;
+        this._render();
+      }
+    }
+    _list() {
+      var _a;
+      const raw = (((_a = this._h.states[this._c.order]) == null ? void 0 : _a.state) || "").split(",").map((s) => s.trim()).filter(Boolean);
+      const seen = /* @__PURE__ */ new Set(), L = [];
+      raw.forEach((s) => {
+        const k = s.replace(/^!/, "");
+        if (LOADS[k] && !seen.has(k)) {
+          seen.add(k);
+          L.push({ k, on: !s.startsWith("!") });
+        }
+      });
+      Object.keys(LOADS).forEach((k) => {
+        if (!seen.has(k)) L.push({ k, on: false });
+      });
+      return L;
+    }
+    _save(L) {
+      const act = L.filter((x) => x.on), nev = L.filter((x) => !x.on);
+      this._h.callService("input_text", "set_value", { entity_id: this._c.order, value: act.map((x) => x.k).concat(nev.map((x) => "!" + x.k)).join(",") });
+    }
+    _render() {
+      var _a, _b, _c, _d;
+      const h = this._h, c = this._c, L = this._list();
+      const act = L.filter((x) => x.on), nev = L.filter((x) => !x.on);
+      const pw = parseFloat((_a = h.states[c.power]) == null ? void 0 : _a.state) || 0, th = parseFloat((_b = h.states[c.threshold]) == null ? void 0 : _b.state) || 10.3, mx = Math.max(11.5, th + 1);
+      const running = ((_c = h.states[c.active]) == null ? void 0 : _c.state) === "on";
+      const last = (_d = h.states[c.last]) == null ? void 0 : _d.state;
+      const row = (x, i, n) => {
+        const L0 = LOADS[x.k], on = L0.on(h), p = L0.p ? L0.p(h) : "";
+        return '<div class="it' + (x.on ? "" : " never") + '" data-k="' + x.k + '"><div class="n">' + (x.on ? i + 1 : "\u2013") + '</div><div class="ic"><ha-icon icon="' + L0.i + '"></ha-icon></div><div class="tx"><b>' + esc(L0.n) + '<span class="st' + (on ? "" : " off") + '" style="display:inline">' + (on ? p || "acceso" : "spento") + "</span></b><span>" + esc(x.on ? L0.d : "Non viene mai sospeso") + "</span></div>" + (x.on ? '<div class="mv"><button data-up' + (i === 0 ? " disabled" : "") + '><ha-icon icon="mdi:chevron-up"></ha-icon></button><button data-dn' + (i === n - 1 ? " disabled" : "") + '><ha-icon icon="mdi:chevron-down"></ha-icon></button></div>' : "") + '<button class="sw' + (x.on ? " on" : "") + '" data-sw title="' + (x.on ? "Non sospendere mai" : "Pu\xF2 essere sospeso") + '"></button></div>';
+      };
+      this.shadowRoot.innerHTML = "<style>" + CSS_P + '</style><ha-card class="' + (running ? "act" : "") + '"><div class="lb">Protezione contatore</div><div class="ttl">' + (running ? "Carichi sospesi adesso" : "Cosa sospendere per primo") + '</div><div class="sub">Se i consumi superano ' + th.toLocaleString("it-IT") + ` kW, la casa spegne queste cose una alla volta, nell'ordine che scegli, e si ferma appena torna sicuro. Dopo 10 minuti tranquilli si riaccende tutto da solo, tranne lavastoviglie e forno.</div><div class="meter"><div class="r"><span>Prelievo dalla rete adesso</span><b>` + pw.toLocaleString("it-IT", { maximumFractionDigits: 1 }) + ' <small style="font-size:12px;color:#9fb3bd">kW</small></b></div><div class="bar"><i style="width:' + Math.min(100, pw / mx * 100) + '%"></i><s style="left:' + th / mx * 100 + '%"></s></div></div><div class="list">' + act.map((x, i) => row(x, i, act.length)).join("") + (nev.length ? '<div class="sep">Mai sospendere</div>' + nev.map((x, i) => row(x, i, 0)).join("") : "") + '</div><div class="ft"><ha-icon icon="mdi:history"></ha-icon><span>' + (last && !["unknown", "unavailable", ""].includes(last) ? "Ultimo intervento: " + esc(last) : "Nessun intervento finora") + "</span></div></ha-card>";
+      const R = this.shadowRoot;
+      R.querySelectorAll(".it").forEach((el) => {
+        const k = el.dataset.k;
+        const mv = (d) => {
+          const A = L.filter((x) => x.on), i = A.findIndex((x) => x.k === k), j = i + d;
+          if (j < 0 || j >= A.length) return;
+          [A[i], A[j]] = [A[j], A[i]];
+          this._save(A.concat(L.filter((x) => !x.on)));
+        };
+        const u = el.querySelector("[data-up]"), dn = el.querySelector("[data-dn]");
+        if (u) u.onclick = () => mv(-1);
+        if (dn) dn.onclick = () => mv(1);
+        el.querySelector("[data-sw]").onclick = () => {
+          const x = L.find((y) => y.k === k);
+          x.on = !x.on;
+          const A = L.filter((y) => y.on && y.k !== k);
+          if (x.on) A.push(x);
+          this._save(A.concat(L.filter((y) => !y.on)));
+        };
+      });
+    }
   }
-  _list() {
-    const raw = (this._h.states[this._c.order]?.state || '').split(',').map((s) => s.trim()).filter(Boolean);
-    const seen = new Set(), L = [];
-    raw.forEach((s) => { const k = s.replace(/^!/, ''); if (LOADS[k] && !seen.has(k)) { seen.add(k); L.push({ k, on: !s.startsWith('!') }); } });
-    Object.keys(LOADS).forEach((k) => { if (!seen.has(k)) L.push({ k, on: false }); });
-    return L;
-  }
-  _save(L) {
-    const act = L.filter((x) => x.on), nev = L.filter((x) => !x.on);
-    this._h.callService('input_text', 'set_value', { entity_id: this._c.order, value: act.map((x) => x.k).concat(nev.map((x) => '!' + x.k)).join(',') });
-  }
-  _render() {
-    const h = this._h, c = this._c, L = this._list();
-    const act = L.filter((x) => x.on), nev = L.filter((x) => !x.on);
-    const pw = parseFloat(h.states[c.power]?.state) || 0, th = parseFloat(h.states[c.threshold]?.state) || 10.3, mx = Math.max(11.5, th + 1);
-    const running = h.states[c.active]?.state === 'on';
-    const last = h.states[c.last]?.state;
-    const row = (x, i, n) => {
-      const L0 = LOADS[x.k], on = L0.on(h), p = L0.p ? L0.p(h) : '';
-      return '<div class="it' + (x.on ? '' : ' never') + '" data-k="' + x.k + '"><div class="n">' + (x.on ? i + 1 : '–') + '</div><div class="ic"><ha-icon icon="' + L0.i + '"></ha-icon></div>'
-        + '<div class="tx"><b>' + esc(L0.n) + '<span class="st' + (on ? '' : ' off') + '" style="display:inline">' + (on ? (p || 'acceso') : 'spento') + '</span></b><span>' + esc(x.on ? L0.d : 'Non viene mai sospeso') + '</span></div>'
-        + (x.on ? '<div class="mv"><button data-up' + (i === 0 ? ' disabled' : '') + '><ha-icon icon="mdi:chevron-up"></ha-icon></button><button data-dn' + (i === n - 1 ? ' disabled' : '') + '><ha-icon icon="mdi:chevron-down"></ha-icon></button></div>' : '')
-        + '<button class="sw' + (x.on ? ' on' : '') + '" data-sw title="' + (x.on ? 'Non sospendere mai' : 'Può essere sospeso') + '"></button></div>';
-    };
-    this.shadowRoot.innerHTML = '<style>' + CSS_P + '</style><ha-card class="' + (running ? 'act' : '') + '">'
-      + '<div class="lb">Protezione contatore</div><div class="ttl">' + (running ? 'Carichi sospesi adesso' : 'Cosa sospendere per primo') + '</div>'
-      + '<div class="sub">Se i consumi superano ' + th.toLocaleString('it-IT') + ' kW, la casa spegne queste cose una alla volta, nell\'ordine che scegli, e si ferma appena torna sicuro. Dopo 10 minuti tranquilli si riaccende tutto da solo, tranne lavastoviglie e forno.</div>'
-      + '<div class="meter"><div class="r"><span>Prelievo dalla rete adesso</span><b>' + pw.toLocaleString('it-IT', { maximumFractionDigits: 1 }) + ' <small style="font-size:12px;color:#9fb3bd">kW</small></b></div><div class="bar"><i style="width:' + Math.min(100, pw / mx * 100) + '%"></i><s style="left:' + (th / mx * 100) + '%"></s></div></div>'
-      + '<div class="list">' + act.map((x, i) => row(x, i, act.length)).join('') + (nev.length ? '<div class="sep">Mai sospendere</div>' + nev.map((x, i) => row(x, i, 0)).join('') : '') + '</div>'
-      + '<div class="ft"><ha-icon icon="mdi:history"></ha-icon><span>' + (last && !['unknown', 'unavailable', ''].includes(last) ? 'Ultimo intervento: ' + esc(last) : 'Nessun intervento finora') + '</span></div></ha-card>';
-    const R = this.shadowRoot;
-    R.querySelectorAll('.it').forEach((el) => {
-      const k = el.dataset.k;
-      const mv = (d) => { const A = L.filter((x) => x.on), i = A.findIndex((x) => x.k === k), j = i + d; if (j < 0 || j >= A.length) return; [A[i], A[j]] = [A[j], A[i]]; this._save(A.concat(L.filter((x) => !x.on))); };
-      const u = el.querySelector('[data-up]'), dn = el.querySelector('[data-dn]');
-      if (u) u.onclick = () => mv(-1); if (dn) dn.onclick = () => mv(1);
-      el.querySelector('[data-sw]').onclick = () => { const x = L.find((y) => y.k === k); x.on = !x.on; const A = L.filter((y) => y.on && y.k !== k); if (x.on) A.push(x); this._save(A.concat(L.filter((y) => !y.on))); };
-    });
-  }
-}
-
-if (!customElements.get('appliance-card')) customElements.define('appliance-card', ApplianceCard);
-if (!customElements.get('waste-card')) customElements.define('waste-card', WasteCard);
-if (!customElements.get('battery-card')) customElements.define('battery-card', BatteryCard);
-if (!customElements.get('priority-card')) customElements.define('priority-card', PriorityCard);
-window.customCards = window.customCards || [];
-window.customCards.push({ type: 'appliance-card', name: 'Elettrodomestico', description: 'Stato del ciclo con illustrazione animata (Home Connect)' });
-window.customCards.push({ type: 'waste-card', name: 'Raccolta rifiuti', description: 'Bidoni di domani e dei prossimi giorni' });
+  if (!customElements.get("appliance-card")) customElements.define("appliance-card", ApplianceCard);
+  if (!customElements.get("waste-card")) customElements.define("waste-card", WasteCard);
+  if (!customElements.get("battery-card")) customElements.define("battery-card", BatteryCard);
+  if (!customElements.get("priority-card")) customElements.define("priority-card", PriorityCard);
+  window.customCards = window.customCards || [];
+  window.customCards.push({ type: "appliance-card", name: "Elettrodomestico", description: "Stato del ciclo con illustrazione animata (Home Connect)" });
+  window.customCards.push({ type: "waste-card", name: "Raccolta rifiuti", description: "Bidoni di domani e dei prossimi giorni" });
 })();
