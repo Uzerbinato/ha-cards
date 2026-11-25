@@ -285,34 +285,22 @@ class FinestraCard extends HTMLElement {
   _build() {
     this.shadowRoot.innerHTML = `<style>
       .fs{position:fixed;inset:0;z-index:2147483000;background:#000;overflow:hidden;color:#e6edf3;font-family:var(--primary-font-family,sans-serif)}
-      video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;visibility:hidden;z-index:1}
-      video.on{visibility:visible;z-index:2}
+      video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;background:#000}
       .blk{position:absolute;inset:0;background:#000;z-index:2;opacity:0;transition:opacity 1.5s ease;pointer-events:none}
       .msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(120% 90% at 50% 30%,#1b2a33 0%,#0b1114 70%);transition:opacity 2s}
       .msg h1{font-size:4.2vw;font-weight:300;margin:0 0 1.2vw}.msg p{font-size:1.6vw;color:#9fb3bd;max-width:60vw;margin:0}
       .t{position:absolute;bottom:3vw;right:4vw;font-size:3vw;font-weight:200;color:#f1f5f9;text-shadow:0 2px 14px rgba(0,0,0,.7);z-index:3}
       .cap{position:absolute;bottom:3.4vw;left:4vw;font-size:1.1vw;letter-spacing:.2em;text-transform:uppercase;color:rgba(241,245,249,.75);text-shadow:0 2px 10px rgba(0,0,0,.7);z-index:3;transition:opacity 3s}
-    </style><div class="fs"><video id="a" muted loop playsinline autoplay></video><video id="b" muted loop playsinline autoplay></video>
+    </style><div class="fs"><video id="a" muted loop playsinline autoplay></video>
       <div class="blk" id="k"></div><div class="msg" id="m" style="z-index:2"><h1>${this._c.title || 'Sala riunioni'}</h1><p id="mt">${this._c.text || ''}</p></div><div class="cap" id="cap"></div><div class="t" id="t"></div></div>`;
     const t = this.shadowRoot.getElementById('t'); const tick = () => { t.textContent = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); };
     tick(); clearInterval(this._iv); this._iv = setInterval(tick, 10000);
   }
   _wait(season, moment) { const m = this.shadowRoot.getElementById('m'); m.style.opacity = 1; this.shadowRoot.getElementById('mt').textContent = `Nessun video per ${season} · ${moment}: aggiungilo nella cartella ${this._c.folder}/${season}/${moment} del NAS.`; }
   _show(url, cap) {
-    const R = this.shadowRoot, a = R.getElementById('a'), b = R.getElementById('b'), k = R.getElementById('k');
-    const front = a.classList.contains('on') ? a : b.classList.contains('on') ? b : null, back = front === a ? b : a;
-    back.src = url; back.load();
-    back.oncanplay = () => {
-      back.oncanplay = null;
-      k.style.opacity = 1;
-      setTimeout(() => {
-        back.play().catch(() => {}); back.classList.add('on');
-        if (front) { front.classList.remove('on'); front.pause(); front.removeAttribute('src'); front.load(); }
-        R.getElementById('m').style.display = 'none';
-        const cp = R.getElementById('cap'); cp.textContent = cap;
-        k.style.opacity = 0;
-      }, 1600);
-    };
+    const R = this.shadowRoot, v = R.getElementById('a'), k = R.getElementById('k');
+    const swap = () => { v.src = url; v.load(); v.oncanplay = () => { v.oncanplay = null; v.play().catch(() => {}); R.getElementById('m').style.display = 'none'; R.getElementById('cap').textContent = cap; k.style.opacity = 0; }; };
+    if (v.getAttribute('src')) { k.style.opacity = 1; setTimeout(swap, 1600); } else swap();
   }
 }
 customElements.define('finestra-card', FinestraCard);
