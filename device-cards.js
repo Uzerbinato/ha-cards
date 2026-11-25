@@ -251,7 +251,9 @@ class FinestraCard extends HTMLElement {
       .fs{position:fixed;inset:0;z-index:2147483000;background:radial-gradient(120% 90% at 50% 30%,#1b2a33 0%,#0b1114 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#e6edf3;font-family:var(--primary-font-family,sans-serif);text-align:center}
       .fs h1{font-size:4.2vw;font-weight:300;margin:0 0 1.2vw;letter-spacing:.02em}.fs p{font-size:1.6vw;color:#9fb3bd;max-width:60vw;margin:0}
       .fs .t{position:absolute;bottom:3vw;right:4vw;font-size:3vw;font-weight:200;color:#cbd5e1}
-    </style><div class="fs"><h1>${c.title || 'Sala riunioni'}</h1><p>${c.text || ''}</p><div class="t" id="t"></div></div>`;
+          .fs video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+      .fs .t{z-index:2;text-shadow:0 2px 12px rgba(0,0,0,.6)}
+    </style><div class="fs">${c.video ? `<video src="${c.video}" autoplay muted loop playsinline></video>` : `<h1>${c.title || 'Sala riunioni'}</h1><p>${c.text || ''}</p>`}<div class="t" id="t"></div></div>`;
     const t = this.shadowRoot.getElementById('t');
     const tick = () => { t.textContent = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); };
     tick(); clearInterval(this._iv); this._iv = setInterval(tick, 10000);
