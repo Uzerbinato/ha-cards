@@ -96,7 +96,9 @@ class MeteoHeroCard extends HTMLElement {
       const dd = new Date(d.datetime);
       return `<div class="day">${GG[dd.getDay()]}${icon(d.condition, true)}<b>${Math.round(d.temperature)}\u00B0</b><span>${d.templow != null ? Math.round(d.templow) + '\u00B0' : ''}</span></div>`;
     }).join('');
-    const solar = this._num(c.solar, 1), batt = this._num(c.battery, 0);
+    const _su = (this._hass.states[c.solar] || {attributes:{}}).attributes.unit_of_measurement;
+    let solar = this._num(c.solar, 1); if (solar != null && _su === 'W') solar = solar >= 1000 ? (solar / 1000).toFixed(1).replace('.', ',') + ' kW' : Math.round(solar) + ' W'; else if (solar != null) solar = solar + ' kW';
+    const batt = this._num(c.battery, 0);
     const key = [saluto, ora, data, cond, temp, minmax, next, solar, batt].join('|');
     if (!force && key === this._key) return;
     this._key = key;
@@ -146,7 +148,7 @@ class MeteoHeroCard extends HTMLElement {
         <div class="clock">${ora}</div>
         <div class="sub">${data}</div>
         <div class="chips">
-          ${solar != null ? `<span class="chip" data-e="${c.solar}">\u2600\uFE0F ${solar} kW</span>` : ''}
+          ${solar != null ? `<span class="chip" data-e="${c.solar}">\u2600\uFE0F ${solar}</span>` : ''}
           ${batt != null ? `<span class="chip" data-e="${c.battery}">\uD83D\uDD0B ${batt}%</span>` : ''}
         </div>
       </div>
