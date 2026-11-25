@@ -1,5 +1,5 @@
 /* meteo-hero-card — intestazione animata per la dashboard di casa
-   config: entity (weather), name, solar (kW), battery (%), outdoor (\u00B0C, opzionale) */
+   config: entity (weather), name, solar (kW), battery (%), outdoor (\u00B0C, opzionale), rooms [{entity climate, name, temperature?}] (temperature stanze a destra, solo schermi larghi) */
 const IT_COND = {
   'sunny': 'Sereno', 'clear-night': 'Sereno', 'partlycloudy': 'Poco nuvoloso',
   'cloudy': 'Nuvoloso', 'fog': 'Nebbia', 'rainy': 'Pioggia', 'pouring': 'Pioggia forte',
@@ -99,7 +99,9 @@ class MeteoHeroCard extends HTMLElement {
     const _su = (this._hass.states[c.solar] || {attributes:{}}).attributes.unit_of_measurement;
     let solar = this._num(c.solar, 1); const _sv = c.solar && this._hass.states[c.solar] ? parseFloat(this._hass.states[c.solar].state) : NaN; if (solar != null && _su === 'W') solar = _sv >= 1000 ? (_sv / 1000).toFixed(1).replace('.', ',') + ' kW' : Math.round(_sv) + ' W'; else if (solar != null) solar = solar + ' kW';
     const batt = this._num(c.battery, 0);
-    const key = [saluto, ora, data, cond, temp, minmax, next, solar, batt].join('|');
+    const rooms = (c.rooms || []).map(r => { const st = this._hass.states[r.entity]; const a = st ? st.attributes : {}; const t = r.temperature ? parseFloat((this._hass.states[r.temperature] || {}).state) : a.current_temperature; const hu = a.current_humidity; const act = a.hvac_action;
+      return `<div class="rm ${act === 'heating' ? 'heat' : act === 'cooling' ? 'cool' : ''}" data-e="${r.entity}"><span>${r.name || a.friendly_name || ''}</span><b>${t == null || isNaN(t) ? '–' : Number(t).toFixed(1).replace('.', ',')}\u00B0</b>${hu != null ? `<i>${Math.round(hu)}%</i>` : ''}</div>`; }).join('');
+    const key = [rooms, saluto, ora, data, cond, temp, minmax, next, solar, batt].join('|');
     if (!force && key === this._key) return;
     this._key = key;
     this.shadowRoot.innerHTML = `<style>
@@ -139,6 +141,12 @@ class MeteoHeroCard extends HTMLElement {
       @keyframes snow{0%{opacity:0;transform:translate(0,-6px)}20%{opacity:1}100%{opacity:0;transform:translate(4px,14px)}}
       @keyframes fog{from{transform:translateX(-6px)}to{transform:translateX(6px)}}
       @keyframes flash{0%,88%,100%{opacity:.15}90%,94%{opacity:1}92%{opacity:.4}}
+      .rooms{display:grid;grid-template-columns:repeat(${Math.min(3, Math.max(1, (c.rooms || []).length))},minmax(112px,1fr));gap:8px;margin-left:8px}
+      .rm{background:rgba(30,41,59,.5);border:1px solid rgba(148,163,184,.14);border-radius:14px;padding:7px 12px;cursor:pointer;display:grid;grid-template-columns:1fr auto;align-items:baseline;column-gap:8px}
+      .rm span{grid-column:1/3;font-size:.7em;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .rm b{font-size:1.55em;font-weight:300;color:#e6edf7}.rm i{font-style:normal;font-size:.78em;color:#7fa8c0}
+      .rm.heat{border-color:rgba(255,152,64,.45)}.rm.cool{border-color:rgba(100,180,255,.45)}
+      @media (max-width:1100px){.rooms{display:none}}
       @media (max-width:700px){.wrap{display:grid;grid-template-columns:1fr auto;align-items:start;gap:8px}.l h1{font-size:1.6em}.clock{font-size:2.6em;margin:4px 0 0}.r{width:auto;flex-direction:column;align-items:flex-end;gap:2px}.days{display:none}.ico{width:64px;height:58px}.t{font-size:2.2em}.chips{margin-top:8px}}
       @media (prefers-reduced-motion:reduce){*{animation:none!important}}
     </style>
@@ -157,6 +165,7 @@ class MeteoHeroCard extends HTMLElement {
         <div class="now"><div class="t">${temp}\u00B0</div><div class="cond">${IT_COND[cond] || cond}</div><div class="mm">${minmax}</div></div>
         <div class="days">${next}</div>
       </div>
+      ${rooms ? `<div class="rooms">${rooms}</div>` : ''}
     </div>`;
     this.shadowRoot.querySelectorAll('[data-e]').forEach(el => el.addEventListener('click', ev => {
       ev.stopPropagation();
