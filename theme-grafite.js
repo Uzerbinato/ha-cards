@@ -43,4 +43,26 @@
   const st = document.createElement('style');
   st.textContent = 'html{zoom:0.62}';
   document.head.appendChild(st);
+  // TV: niente barra laterale, intestazione e navbar
+  try { localStorage.setItem('dockedSidebar', '"always_hidden"'); } catch (e) {}
+  const q = (root, sel) => root && root.shadowRoot && root.shadowRoot.querySelector(sel);
+  const hide = () => {
+    const ha = document.querySelector('home-assistant');
+    const main = q(ha, 'home-assistant-main');
+    const drawer = q(main, 'ha-drawer');
+    const sb = drawer && drawer.querySelector('ha-sidebar'); if (sb) sb.style.display = 'none';
+    if (drawer && drawer.shadowRoot) { const a = drawer.shadowRoot.querySelector('aside'); if (a) a.style.display = 'none'; const ac = drawer.shadowRoot.querySelector('.mdc-drawer-app-content'); if (ac) { ac.style.marginLeft = '0'; ac.style.paddingLeft = '0'; } }
+    const panel = q(main, 'partial-panel-resolver') || (drawer && drawer.querySelector('partial-panel-resolver'));
+    const lov = panel && panel.querySelector('ha-panel-lovelace');
+    const root = q(lov, 'hui-root');
+    if (root && root.shadowRoot && !root.shadowRoot.getElementById('tvhide')) {
+      const x = document.createElement('style'); x.id = 'tvhide';
+      x.textContent = '.header,.toolbar,app-header{display:none!important}#view{padding-top:0!important;min-height:100vh!important}';
+      root.shadowRoot.appendChild(x);
+    }
+    document.querySelectorAll('*').length; // no-op
+    const deep = (n) => { if (!n) return; if (n.tagName === 'NAVBAR-CARD') n.style.display = 'none'; (n.shadowRoot ? [...n.shadowRoot.children] : []).concat([...(n.children || [])]).forEach(deep); };
+    if (root) deep(root);
+  };
+  setInterval(hide, 2000);
 })();
