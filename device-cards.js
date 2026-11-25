@@ -113,10 +113,10 @@ class NetCard extends HTMLElement {
   set hass(h) {
     const c = this._c, on = (id) => h.states[id] && h.states[id].state === 'on';
     const net = on(c.internet), rt = on(c.router);
-    const d = num(h, c.download), u = num(h, c.upload), lat = num(h, c.latency), loss = num(h, c.loss);
+    let d = num(h, c.download), u = num(h, c.upload); const lat = num(h, c.latency), loss = num(h, c.loss);
     const cl = (c.clients || []).reduce((a, id) => a + (num(h, id) || 0), 0);
-    const key = [net, rt, d, u, lat, loss, cl].join('|'); if (key === this._key) return; this._key = key;
-    const state = !rt ? ['Router non raggiungibile', 'bad'] : !net ? ['Internet assente', 'bad'] : (d !== null && d < c.nominal_down * 0.25) || (loss !== null && loss > 2) ? ['Linea lenta', 'busy'] : ['Connessione regolare', 'ok'];
+    const key = [net, rt, d, u, lat, loss, cl, num(h, c.test_ping)].join('|'); if (key === this._key) return; this._key = key;
+    const tp = num(h, c.test_ping), bad = tp !== null && tp > 2000; if (bad) { d = null; u = null; } const state = !rt ? ['Router non raggiungibile', 'bad'] : !net ? ['Internet assente', 'bad'] : bad ? ['Connessione regolare', 'ok'] : (d !== null && d < c.nominal_down * 0.25) || (loss !== null && loss > 2) ? ['Linea lenta', 'busy'] : ['Connessione regolare', 'ok'];
     const arc = (v, max, col) => { const k = v === null ? 0 : Math.min(1, v / max), a = Math.PI * (1 - k), x = 50 + 40 * Math.cos(a), y = 50 - 40 * Math.sin(a);
       return `<svg viewBox="0 0 100 58"><path d="M10 50 A40 40 0 0 1 90 50" fill="none" stroke="rgba(148,163,184,.18)" stroke-width="8" stroke-linecap="round"/>
         ${k > 0 ? `<path d="M10 50 A40 40 0 0 ${k > 0.5 ? 1 : 0} 1 ${x.toFixed(1)} ${y.toFixed(1)}" fill="none" stroke="${col}" stroke-width="8" stroke-linecap="round"/>` : ''}</svg>`; };
