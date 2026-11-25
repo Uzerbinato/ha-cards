@@ -172,5 +172,37 @@ class HostCard extends HTMLElement {
   }
 }
 customElements.define('host-card', HostCard);
+
+// now-playing-card: brano in riproduzione, scuro e leggibile da lontano
+//   config: entity (media_player), name, controls (default true)
+class NowPlayingCard extends HTMLElement {
+  setConfig(c) { if (!c.entity) throw new Error('entity richiesta'); this._c = c; if (!this.shadowRoot) this.attachShadow({ mode: 'open' }); }
+  getCardSize() { return 2; }
+  getGridOptions() { return { columns: 12, min_columns: 6, rows: 'auto' }; }
+  set hass(h) {
+    this._h = h; const c = this._c, s = h.states[c.entity]; if (!s) return; const a = s.attributes;
+    const pic = a.entity_picture || '', key = s.state + a.media_title + a.media_artist + pic;
+    if (key === this._key) return; this._key = key;
+    const play = s.state === 'playing', ctl = c.controls !== false;
+    this.shadowRoot.innerHTML = `<style>${DC_CSS}
+      .np{display:flex;gap:14px;align-items:center}
+      .cov{flex:0 0 64px;height:64px;border-radius:12px;background:${pic ? `center/cover url('${esc(pic)}')` : 'linear-gradient(135deg,#f5b544,#b45309)'};display:grid;place-items:center;box-shadow:0 8px 20px rgba(0,0,0,.4)}
+      .cov ha-icon{--mdc-icon-size:30px;color:#1a1206}
+      .tt{font-size:17px;font-weight:600;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .ar{font-size:14px;color:#f5b544;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .src{font-size:11px;color:var(--secondary-text-color);margin-top:4px;letter-spacing:.06em;text-transform:uppercase}
+      .eq{display:inline-flex;gap:2px;align-items:flex-end;height:12px;margin-right:6px;vertical-align:-1px}
+      .eq i{width:3px;background:#f5b544;border-radius:2px;animation:eq 1s ease-in-out infinite}.eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}
+      @keyframes eq{0%,100%{height:3px}50%{height:12px}}
+      .bt{display:flex;gap:8px;margin-left:auto}.bt button{all:unset;cursor:pointer;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.07);color:#e2e8f0}
+      .bt button.m{background:#f5b544;color:#1a1206}
+    </style><ha-card><div class="np"><div class="cov">${pic ? '' : '<ha-icon icon="mdi:music"></ha-icon>'}</div>
+      <div class="meta"><div class="tt">${esc(a.media_title || 'Nessun brano')}</div><div class="ar">${esc(a.media_artist || '')}</div>
+      <div class="src">${play ? '<span class="eq"><i></i><i></i><i></i></span>' : ''}${esc(c.name || a.friendly_name)}${a.source ? ' · ' + esc(a.source) : ''}</div></div>
+      ${ctl ? `<div class="bt"><button data-a="media_previous_track"><ha-icon icon="mdi:skip-previous"></ha-icon></button><button class="m" data-a="media_play_pause"><ha-icon icon="mdi:${play ? 'pause' : 'play'}"></ha-icon></button><button data-a="media_next_track"><ha-icon icon="mdi:skip-next"></ha-icon></button></div>` : ''}</div></ha-card>`;
+    this.shadowRoot.querySelectorAll('[data-a]').forEach((b) => b.addEventListener('click', () => this._h.callService('media_player', b.dataset.a, { entity_id: c.entity })));
+  }
+}
+customElements.define('now-playing-card', NowPlayingCard);
 window.customCards = window.customCards || [];
 window.customCards.push({ type: 'printer-card', name: 'Stampante', description: 'Stampante con cartucce' }, { type: 'host-card', name: 'Computer / server', description: 'Risorse del computer' }, { type: 'net-card', name: 'Rete e internet', description: 'Connessione e velocità' });
