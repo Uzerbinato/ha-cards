@@ -36,3 +36,11 @@
   apply();
   new MutationObserver(apply).observe(el, { attributes: true, attributeFilter: ['style'] });
 })();
+
+// Schermo TV (Google Cast): riduce la scala per far stare più schede nello schermo
+(() => {
+  if (!/CrKey|Cast/i.test(navigator.userAgent) && !/[?&]tv=1/.test(location.search)) return;
+  const st = document.createElement('style');
+  st.textContent = 'html{zoom:0.62}';
+  document.head.appendChild(st);
+})();
