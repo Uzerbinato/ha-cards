@@ -233,7 +233,16 @@ ${g ? `<div class="gate"><div class="ic"><ha-icon icon="mdi:gate"></ha-icon></di
 
 /* ---------------- ROBOT ---------------- */
 class VacuumCard extends Base {
-  _ents() { return [this._c.entity, this._c.battery, this._c.room].filter(Boolean); }
+  _ents() { return [this._c.entity, this._c.battery, this._c.room, this._c.mop_type, this._c.schedule].filter(Boolean); }
+  _mopLab(v) { return { 1: 'ASP.', 2: 'LAV.', 3: 'ASP.+LAV.', 4: 'ASP. poi LAV.', Sweep: 'ASP.', Mop: 'LAV.', 'Sweep Mop': 'ASP.+LAV.', 'Sweep Before Mopping': 'ASP. poi LAV.' }[v] || ''; }
+  _next() {
+    const c = this._c; if (!c.schedule) return null; let j; try { j = JSON.parse(this._st(c.schedule)); } catch (e) { return null; }
+    const now = new Date(), gg = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab']; let best = null;
+    for (const t of (j.time_labels || [])) { if (!t.on) continue; const hh = t.time >> 8, mm = t.time & 255;
+      for (let d = 0; d < 8; d++) { const x = new Date(now); x.setDate(now.getDate() + d); x.setHours(hh, mm, 0, 0); if (x <= now) continue; if (!(t.week & (1 << x.getDay()))) continue; if (!best || x < best.x) best = { x, t }; break; } }
+    if (!best) return null; const x = best.x, oggi = x.toDateString() === now.toDateString(), dom = new Date(now.getTime() + 864e5).toDateString() === x.toDateString();
+    return (oggi ? 'oggi' : dom ? 'domani' : gg[x.getDay()]) + ' ' + String(x.getHours()).padStart(2, '0') + ':' + String(x.getMinutes()).padStart(2, '0') + ' · ' + this._mopLab(best.t.mop);
+  }
   _render() {
     const c = this._c, s = this._st(c.entity) || 'unavailable', bat = parseFloat(this._st(c.battery));
     const room = this._st(c.room); const rmap = c.rooms || {};
@@ -249,9 +258,10 @@ class VacuumCard extends Base {
 ha-card{display:flex;gap:14px;align-items:center;cursor:pointer}${run ? 'ha-card{border-color:rgba(251,191,36,.35)}' : ''}
 .rb{width:74px;flex:none}.i{flex:1;min-width:0}.nm{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8fa3ad}
 .big{font-size:21px;font-weight:700;color:${run ? '#fcd34d' : '#e6edf7'}}.sub{font-size:12.5px;color:#9fb3bd}
+.mt{color:#fcd34d;font-weight:700;letter-spacing:.5px}.nx{font-size:12px;color:#b6c4cc;margin-top:3px}
 .bt{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11.5px;color:#b6c4cc}.bb{width:60px;height:5px;border-radius:3px;background:rgba(148,163,184,.15);overflow:hidden}.bb div{height:100%;background:${bat < 25 ? '#f87171' : '#4ade80'}}
 .go{all:unset;cursor:pointer;width:38px;height:38px;border-radius:12px;background:rgba(148,163,184,.10);display:flex;align-items:center;justify-content:center}.go ha-icon{--mdc-icon-size:20px;color:#cbd5e1}
-</style><ha-card>${svg}<div class="i"><div class="nm">${esc(c.name || 'Robot')}</div><div class="big">${lab}</div><div class="sub">${run && room ? esc(rmap[room] || room) : c.subtitle || ''}</div>
+</style><ha-card>${svg}<div class="i"><div class="nm">${esc(c.name || 'Robot')}</div><div class="big">${lab}</div><div class="sub">${run ? [room ? esc(rmap[room] || room) : '', c.mop_type ? '<b class="mt">' + this._mopLab(this._st(c.mop_type)) + '</b>' : ''].filter(Boolean).join(' · ') : c.subtitle || ''}</div>${this._next() ? '<div class="nx">Prossima: ' + esc(this._next()) + '</div>' : ''}
 <div class="bt"><div class="bb"><div style="width:${isNaN(bat) ? 0 : bat}%"></div></div>${isNaN(bat) ? '' : Math.round(bat) + '%'}</div></div><button class="go" title="Pannello"><ha-icon icon="mdi:chevron-right"></ha-icon></button></ha-card>`;
     this.shadowRoot.querySelector('ha-card').onclick = () => c.navigation_path ? nav(c.navigation_path) : moreInfo(this, c.entity);
   }
