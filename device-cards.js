@@ -277,7 +277,7 @@ class FinestraCard extends HTMLElement {
     if (!list.length) { this._wait(season, moment); this._slot = slot; return; }
     const pick = list.length > 1 ? list.filter((x) => x.media_content_id !== this._cur)[Math.floor(Math.random() * (list.length - 1))] : list[0];
     if (pick.media_content_id === this._cur && slot === this._slot) { this._since = Date.now(); return; }
-    try { const r = await this._h.callWS({ type: 'media_source/resolve_media', media_content_id: pick.media_content_id }); this._cur = pick.media_content_id; this._slot = slot; this._since = Date.now(); this._show(r.url, pick.title.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')); } catch (e) {}
+    try { const r = await this._h.callWS({ type: 'media_source/resolve_media', media_content_id: pick.media_content_id }); this._cur = pick.media_content_id; this._slot = slot; this._since = Date.now(); this._show(r.url, (/^\d/.test(pick.title) ? '' : pick.title.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '))); } catch (e) {}
   }
   _build() {
     this.shadowRoot.innerHTML = `<style>
