@@ -676,11 +676,35 @@ ha-card.dis{border-color:rgba(251,191,36,.30)}ha-card.chg{border-color:rgba(52,2
       if (!this.shadowRoot) this.attachShadow({ mode: "open" });
       const c = this._c, ids = [c.reserve, c.threshold, c.release];
       c.batteries.forEach((b) => ids.push(b.soc, b.power, b.mode, b.grid, b.dmax, b.floor, b.top, b.cday, b.dday));
-      const key = ids.map((e) => h.states[e] ? h.states[e].state : "").join("|");
+      if (c.pv && (!this._pvT || Date.now() - this._pvT > 6e5)) { this._pvT = Date.now(); this._pvFetch(); }
+      const key = ids.map((e) => h.states[e] ? h.states[e].state : "").join("|") + "|" + (this._pvV || 0);
       if (key !== this._k) {
         this._k = key;
         this._render();
       }
+    }
+    async _pvFetch() {
+      try {
+        const c = this._c, d0 = new Date(); d0.setHours(0, 0, 0, 0);
+        const r = await this._h.callWS({ type: "history/history_during_period", start_time: d0.toISOString(), entity_ids: [c.pv], minimal_response: true, no_attributes: true });
+        const pts = (r[c.pv] || []).map((p) => [p.lu ? p.lu * 1e3 : Date.parse(p.last_updated || p.last_changed), parseFloat(p.s != null ? p.s : p.state)]).filter((p) => !isNaN(p[1]));
+        const b = new Array(48).fill(0); pts.forEach(([t, v], i) => { const k = Math.floor((t - d0) / 18e5); if (k >= 0 && k < 48) b[k] = Math.max(b[k], v); });
+        this._pv = b; this._pvV = (this._pvV || 0) + 1; this._k = null; if (this._h) this.hass = this._h;
+      } catch (e) {}
+    }
+    _pvHtml() {
+      const b = this._pv || new Array(48).fill(0), c = this._c, s0 = 12, s1 = 38; // 6:00-19:00
+      const seg = b.slice(s0, s1), mx = Math.max(c.pv_max || 0, ...seg, 1), W = 160, H = 64, n = seg.length - 1;
+      const now = new Date(), cur = (now.getHours() * 2 + now.getMinutes() / 30) - s0;
+      const pts = seg.map((v, i) => [(i / n * W).toFixed(1), (H - 4 - v / mx * (H - 10)).toFixed(1)]);
+      const kwh = b.reduce((a, v) => a + v / 2000, 0), pk = Math.max(...b);
+      const line = pts.map((p, i) => (i ? "L" : "M") + p[0] + " " + p[1]).join(" ");
+      return '<div class="cell" style="flex-direction:column;align-items:stretch;gap:2px;padding:8px 10px" data-e="' + c.pv + '"><div style="display:flex;justify-content:space-between;font-size:11px;color:#9fb3bd"><span>Fotovoltaico oggi</span><b style="color:#fcd34d">' + kwh.toFixed(1).replace(".", ",") + ' kWh</b></div>'
+        + '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%;height:64px"><defs><linearGradient id="pvg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbbf24" stop-opacity=".55"/><stop offset="1" stop-color="#fbbf24" stop-opacity="0"/></linearGradient></defs>'
+        + '<path d="' + line + " L" + W + " " + (H - 4) + " L0 " + (H - 4) + ' Z" fill="url(#pvg)"/><path d="' + line + '" fill="none" stroke="#fbbf24" stroke-width="1.6"/>'
+        + (cur > 0 && cur < n ? '<line x1="' + (cur / n * W).toFixed(1) + '" y1="2" x2="' + (cur / n * W).toFixed(1) + '" y2="' + (H - 4) + '" stroke="rgba(226,232,240,.35)" stroke-dasharray="2 2"/>' : "")
+        + '<line x1="0" y1="' + (H - 4) + '" x2="' + W + '" y2="' + (H - 4) + '" stroke="rgba(148,163,184,.25)"/></svg>'
+        + '<div style="display:flex;justify-content:space-between;font-size:10px;color:#6f838d"><span>6</span><span>picco ' + Math.round(pk) + ' W</span><span>19</span></div></div>';
     }
     _s(id) {
       const s = this._h.states[id];
