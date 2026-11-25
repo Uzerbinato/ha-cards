@@ -146,7 +146,7 @@ class MeteoHeroCard extends HTMLElement {
       .rm span{grid-column:1/3;font-size:.7em;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .rm b{font-size:1.55em;font-weight:300;color:#e6edf7}.rm i{font-style:normal;font-size:.78em;color:#7fa8c0}
       .rm.heat{border-color:rgba(255,152,64,.45)}.rm.cool{border-color:rgba(100,180,255,.45)}
-      @media (max-width:1100px){.rooms{display:none}}
+      @media (max-width:700px){.rooms{display:none}}
       @media (max-width:700px){.wrap{display:grid;grid-template-columns:1fr auto;align-items:start;gap:8px}.l h1{font-size:1.6em}.clock{font-size:2.6em;margin:4px 0 0}.r{width:auto;flex-direction:column;align-items:flex-end;gap:2px}.days{display:none}.ico{width:64px;height:58px}.t{font-size:2.2em}.chips{margin-top:8px}}
       @media (prefers-reduced-motion:reduce){*{animation:none!important}}
     </style>

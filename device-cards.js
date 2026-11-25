@@ -157,7 +157,7 @@ class HostCard extends HTMLElement {
       <div class="trk"><div class="bf" style="width:${x === null ? 0 : Math.min(100, (x / max) * 100)}%;background:${col(x, w, a)}"></div></div></div>`;
     const art = c.image ? `<div class="art"><img src="${esc(c.image)}" alt="" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))"></div>` : '';
     this.shadowRoot.innerHTML = `<style>${DC_CSS}
-      .tg{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:16px} ${TACHO_CSS}
+      .tg{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px;margin-top:16px} ${TACHO_CSS}
       .row{cursor:pointer} .rl{display:flex;justify-content:space-between;font-size:12px;color:var(--secondary-text-color);margin-bottom:5px} .rl b{color:var(--primary-text-color);font-weight:600;font-size:13px}
       .trk{height:7px;border-radius:99px;background:rgba(148,163,184,.14);overflow:hidden} .bf{height:100%;border-radius:99px;transition:width .6s;box-shadow:0 0 10px rgba(245,181,68,.35)}
       .foot{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
