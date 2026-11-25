@@ -175,7 +175,7 @@ class HostCard extends HTMLElement {
     </style><ha-card><div class="top">${art}<div class="meta">
       <div class="name">${esc(c.name || 'Server')}</div><div class="sub">${esc(c.subtitle || '')}${ip ? ` · ${esc(ip)}` : ''}</div>
       <div class="pill ${online ? 'ok' : 'off'}"><span class="dot"></span>${online ? 'In funzione' : 'Non raggiungibile'}</div></div></div>
-      <div class="tg">${[['CPU','cpu',v.cpu,'%',100,60,85,0],['Temperatura','temp',v.temp,' °C',100,70,85,0],['Memoria','mem',v.mem,'%',100,75,90,0],['Disco','disk',v.disk,'%',100,80,92,0]].map(([l,k,x,un,mx,w,a]) => `<div class="tc row" data-e="${esc(c[k] || '')}">${tacho(x, mx, '#f5b544', w, a)}<div class="tv">${fmt(x)}<small>${un}</small></div><div class="tl">${l}</div></div>`).join('')}</div>
+      <div class="tg">${[['CPU','cpu',v.cpu,'%',100,60,85,0],[c.temp_label || 'Temperatura','temp',v.temp,(u('temp') === '%' ? '%' : ' °C'),100,70,85,0],['Memoria','mem',v.mem,'%',100,75,90,0],['Disco','disk',v.disk,'%',100,80,92,0]].map(([l,k,x,un,mx,w,a]) => `<div class="tc row" data-e="${esc(c[k] || '')}">${tacho(x, mx, '#f5b544', w, a)}<div class="tv">${fmt(x)}<small>${un}</small></div><div class="tl">${l}</div></div>`).join('')}</div>
       <div class="foot"><div class="k"><span>Acceso da</span><b>${up}</b></div><div class="k"><span>Carico 5 min</span><b>${fmt(v.load, 2)}</b></div>
       <div class="k"><span>Rete ↓ / ↑</span><b>${fmt(v.ni, 1)} / ${fmt(v.no, 1)} ${esc(u('net_in'))}</b></div></div></ha-card>`;
     this.shadowRoot.querySelectorAll('.row').forEach((el) => el.dataset.e && el.addEventListener('click', () => this.dispatchEvent(new CustomEvent('hass-more-info', { bubbles: true, composed: true, detail: { entityId: el.dataset.e } }))));
