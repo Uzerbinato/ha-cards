@@ -73,9 +73,9 @@
     if (!ct) return;
     const r = (ct.getBoundingClientRect().bottom + 12) / Math.max(1, window.innerHeight);
     let nz = z;
-    if (r > 1.01) nz = z / r * 0.99; else if (r < 0.98 && z < 1) nz = Math.min(1, z / r * 0.99);
+    if (r > 1.0) nz = z / r * 0.985; else if (r < 0.94 && z < 1) nz = Math.min(1, z / r * 0.985);
     nz = Math.max(0.35, Math.round(nz * 1000) / 1000);
-    if (Math.abs(nz - z) > 0.004) { z = nz; st.textContent = 'html{zoom:' + z + '}'; }
+    if (Math.abs(nz - z) > 0.015) { z = nz; st.textContent = 'html{zoom:' + z + '}'; }
   };
   setInterval(fit, 3000);
   // testi piccoli più leggibili da lontano: ingrandisce del 22% i testi HTML sotto i 15 px (non gli SVG)
@@ -92,5 +92,11 @@
       if (fs && fs < 15) el.style.setProperty('font-size', (fs * 1.22).toFixed(1) + 'px', 'important');
     }
   };
-  setInterval(() => boost(document), 2500);
+  const obs = new WeakSet();
+  const watch = (root) => {
+    if (!root || obs.has(root)) return; obs.add(root);
+    new MutationObserver(() => { boost(root); }).observe(root, { childList: true, subtree: true });
+    (root.querySelectorAll ? root.querySelectorAll('*') : []).forEach((el) => el.shadowRoot && watch(el.shadowRoot));
+  };
+  setInterval(() => { boost(document); watch(document); document.querySelectorAll('*').forEach((el) => el.shadowRoot && watch(el.shadowRoot)); }, 4000);
 })();
