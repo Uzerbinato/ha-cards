@@ -291,7 +291,7 @@ class FinestraCard extends HTMLElement {
       .msg h1{font-size:4.2vw;font-weight:300;margin:0 0 1.2vw}.msg p{font-size:1.6vw;color:#9fb3bd;max-width:60vw;margin:0}
       .t{position:absolute;bottom:3vw;right:4vw;font-size:3vw;font-weight:200;color:#f1f5f9;text-shadow:0 2px 14px rgba(0,0,0,.7);z-index:3}
       .cap{position:absolute;bottom:3.4vw;left:4vw;font-size:1.1vw;letter-spacing:.2em;text-transform:uppercase;color:rgba(241,245,249,.75);text-shadow:0 2px 10px rgba(0,0,0,.7);z-index:3;transition:opacity 3s}
-    </style><div class="fs"><video id="a" muted loop playsinline autoplay></video>
+    </style><div class="fs"><video id="a" muted loop playsinline autoplay preload="auto" poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="></video>
       <div class="blk" id="k"></div><div class="msg" id="m" style="z-index:2"><h1>${this._c.title || 'Sala riunioni'}</h1><p id="mt">${this._c.text || ''}</p></div><div class="cap" id="cap"></div><div class="t" id="t"></div></div>`;
     const t = this.shadowRoot.getElementById('t'); const tick = () => { t.textContent = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); };
     tick(); clearInterval(this._iv); this._iv = setInterval(tick, 10000);
@@ -299,7 +299,7 @@ class FinestraCard extends HTMLElement {
   _wait(season, moment) { const m = this.shadowRoot.getElementById('m'); m.style.opacity = 1; this.shadowRoot.getElementById('mt').textContent = `Nessun video per ${season} · ${moment}: aggiungilo nella cartella ${this._c.folder}/${season}/${moment} del NAS.`; }
   _show(url, cap) {
     const R = this.shadowRoot, v = R.getElementById('a'), k = R.getElementById('k');
-    const swap = () => { v.src = url; v.load(); v.oncanplay = () => { v.oncanplay = null; v.play().catch(() => {}); R.getElementById('m').style.display = 'none'; R.getElementById('cap').textContent = cap; k.style.opacity = 0; }; };
+    const swap = () => { v.muted = true; v.defaultMuted = true; v.src = url; const done = () => { R.getElementById('m').style.display = 'none'; R.getElementById('cap').textContent = cap; k.style.opacity = 0; }; v.onplaying = () => { v.onplaying = null; done(); }; v.play().catch(() => {}); setTimeout(() => { if (v.paused) v.play().catch(() => {}); }, 3000); };
     if (v.getAttribute('src')) { k.style.opacity = 1; setTimeout(swap, 1600); } else swap();
   }
 }
