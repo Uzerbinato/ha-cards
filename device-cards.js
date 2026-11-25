@@ -209,6 +209,30 @@ class NowPlayingCard extends HTMLElement {
   }
 }
 customElements.define('now-playing-card', NowPlayingCard);
+
+// meter-card: tachimetro grande con soglie e avviso (es. prelievo dal contatore)
+//   config: entity (W o kW), name, max (kW, def 8), warn (kW, def 6), alarm (kW, def 6.6), note
+class MeterCard extends HTMLElement {
+  setConfig(c) { if (!c.entity) throw new Error('entity richiesta'); this._c = Object.assign({ max: 8, warn: 6, alarm: 6.6, name: 'Prelievo dal contatore' }, c); if (!this.shadowRoot) this.attachShadow({ mode: 'open' }); }
+  getCardSize() { return 3; }
+  getGridOptions() { return { columns: 12, min_columns: 6, rows: 'auto' }; }
+  set hass(h) {
+    const c = this._c, s = h.states[c.entity]; let v = s ? parseFloat(s.state) : NaN;
+    if (!isNaN(v) && s.attributes.unit_of_measurement === 'W') v = v / 1000; if (isNaN(v)) v = null;
+    const key = String(v); if (key === this._key) return; this._key = key;
+    const lvl = v === null ? 'off' : v >= c.alarm ? 'bad' : v >= c.warn ? 'busy' : 'ok';
+    const msg = lvl === 'bad' ? 'Oltre il limite: il contatore può staccare. Spegni qualcosa!' : lvl === 'busy' ? 'Vicino al limite: evita di accendere altro' : 'Margine disponibile ' + fmt(Math.max(0, c.warn - (v || 0)), 1) + ' kW';
+    this.shadowRoot.innerHTML = `<style>${DC_CSS} ${TACHO_CSS}
+      .w{display:flex;gap:14px;align-items:center}.w .tc{flex:0 0 130px;background:none;border:0;padding:0}.w .tc svg{max-width:130px}.w .tc .tv{font-size:20px}
+      .msg{font-size:13px;color:var(--secondary-text-color);margin-top:6px}.bad .msg{color:#f87171;font-weight:600}.busy .msg{color:#fbbf24}
+      ha-card.bad{border:1px solid rgba(248,113,113,.6);box-shadow:0 0 24px rgba(248,113,113,.25);animation:pl 1.4s ease-in-out infinite}@keyframes pl{50%{box-shadow:0 0 6px rgba(248,113,113,.1)}}
+    </style><ha-card class="${lvl}"><div class="w"><div class="tc" data-e="${esc(c.entity)}">${tacho(v, c.max, '#22d3ee', c.warn, c.alarm)}<div class="tv">${fmt(v, 1)}<small> kW</small></div></div>
+      <div class="meta"><div class="name">${esc(c.name)}</div><div class="sub">Impegnata ${fmt(c.warn, 0)} kW · stacca oltre ${fmt(c.alarm, 1)} kW</div>
+      <div class="pill ${lvl}"><span class="dot"></span>${lvl === 'bad' ? 'Sovraccarico' : lvl === 'busy' ? 'Attenzione' : lvl === 'off' ? 'Non disponibile' : 'Regolare'}</div><div class="msg">${msg}</div></div></div></ha-card>`;
+    this.shadowRoot.querySelector('.tc').addEventListener('click', () => this.dispatchEvent(new CustomEvent('hass-more-info', { bubbles: true, composed: true, detail: { entityId: c.entity } })));
+  }
+}
+customElements.define('meter-card', MeterCard);
 window.customCards = window.customCards || [];
 window.customCards.push({ type: 'printer-card', name: 'Stampante', description: 'Stampante con cartucce' }, { type: 'host-card', name: 'Computer / server', description: 'Risorse del computer' }, { type: 'net-card', name: 'Rete e internet', description: 'Connessione e velocità' });
 
