@@ -160,9 +160,9 @@ class MeteoHeroCard extends HTMLElement {
       .rm span{grid-column:1/3;font-size:.7em;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .rm b{font-size:1.55em;font-weight:300;color:#e6edf7}.rm i{font-style:normal;font-size:.78em;color:#7fa8c0}
       .rm.heat{border-color:rgba(255,152,64,.45)}.rm.cool{border-color:rgba(100,180,255,.45)}
-      .mtr{position:relative;width:118px;text-align:center;cursor:pointer;flex:none}.mtr svg{width:100%;display:block}
-      .mtr .mv{position:absolute;left:0;right:0;top:58px;font-size:1.05em;font-weight:600;color:#e6edf7}.mtr .mv small{font-size:.7em;color:#94a3b8}
-      .mtr .ml{font-size:.68em;color:#94a3b8;margin-top:-6px;letter-spacing:.04em}.mtr.al{animation:pl 1.2s infinite}@keyframes pl{50%{opacity:.55}}
+      .mtr{position:relative;width:170px;text-align:center;cursor:pointer;flex:none}.mtr svg{width:100%;display:block}
+      .mtr .mv{position:absolute;left:0;right:0;top:86px;font-size:1.45em;font-weight:600;color:#e6edf7}.mtr .mv small{font-size:.7em;color:#94a3b8}
+      .mtr .ml{font-size:.8em;color:#94a3b8;margin-top:-6px;letter-spacing:.04em}.mtr.al{animation:pl 1.2s infinite}@keyframes pl{50%{opacity:.55}}
       .stl{display:grid;grid-template-columns:repeat(2,minmax(150px,1fr));gap:5px 8px;margin-left:8px;align-self:center}
       .stx{display:grid;grid-template-columns:20px 1fr auto;align-items:center;gap:6px;background:rgba(30,41,59,.45);border:1px solid rgba(148,163,184,.12);border-radius:10px;padding:4px 10px;cursor:pointer;font-size:.8em;white-space:nowrap}
       .stx ha-icon{--mdc-icon-size:16px;color:#f5b544}.stx span{color:#94a3b8;overflow:hidden;text-overflow:ellipsis}.stx b{color:#e6edf7;font-weight:600}
