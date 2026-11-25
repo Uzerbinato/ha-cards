@@ -71,8 +71,8 @@ class PrinterCard extends HTMLElement {
       .warn{margin-top:12px;font-size:12px;color:#fb923c}
       .cmp{display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center}
       .cmp .art{width:110px;height:96px}
-      .cmp .hd{display:flex;align-items:center;gap:10px;min-width:0}.cmp .hd .name{flex:1;min-width:0}.cmp .pill{margin-top:0}
-      .cmp .inks{margin-top:10px;gap:8px}.cmp .cart{height:44px;max-width:30px}
+      .cmp .hd{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}.cmp .hd .name{flex:1 1 100%;min-width:0}.cmp .hd .pill{margin-left:0!important}.cmp .pill{margin-top:0}
+      .cmp .inks{margin-top:10px;gap:4px}.cmp .iname{font-size:10px;overflow:hidden;text-overflow:ellipsis;max-width:100%}.cmp .cart{height:44px;max-width:30px}
     </style><ha-card>${c.compact ? `<div class="cmp" style="grid-template-columns:${inks.length > 4 ? 84 : 110}px 1fr"><div class="art" style="width:${inks.length > 4 ? 84 : 110}px">${art}</div><div style="min-width:0">
       <div class="hd"><div class="name">${esc(c.name || (s && s.attributes.friendly_name) || c.entity)}</div><div class="pill ${lab[1]}"><span class="dot"></span>${esc(lab[0])}</div>${ppill}</div>` : `<div class="top"><div class="art">${art}</div><div class="meta">
       <div class="name">${esc(c.name || (s && s.attributes.friendly_name) || c.entity)}</div>
