@@ -110,6 +110,7 @@
   const cur = () => Math.max(0, PAGES.findIndex(([p]) => location.pathname.endsWith('/' + p)));
   const css = document.createElement('style');
   css.textContent = `
+    html,body{background:#0b0e11!important}
     #tvdots{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:99999;display:flex;gap:14px;align-items:center;padding:8px 18px;border-radius:999px;background:rgba(10,14,18,.55);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);font:600 13px/1 system-ui,sans-serif;color:#cbd5e1;opacity:0;transition:opacity .6s}
     #tvdots.show{opacity:1}
     #tvdots i{width:9px;height:9px;border-radius:50%;background:rgba(203,213,225,.3);transition:all .4s}
