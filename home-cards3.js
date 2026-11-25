@@ -21,6 +21,31 @@ const SLEEP = { off: 'Off', '30_min': '30′', '60_min': '60′', '90_min': '90�
 const fmt = (s) => { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
 // disegno del frontale (ispirato all'R-N2000A: due VU meter retroilluminati, manopole, display OLED in basso)
+
+// due vu-meter analogici retroilluminati, lancette animate durante la riproduzione
+function vuSvg({ play, vol, brand }) {
+  const one = (x, id, delay) => {
+    const cx = x + 80, cy = 112, R = 78; let sc = '';
+    for (let i = 0; i <= 10; i++) { const a = (-50 + i * 10) * Math.PI / 180, r1 = R - 8, r2 = R - (i % 2 ? 14 : 18), red = i >= 8;
+      sc += `<line x1="${(cx + r1 * Math.sin(a)).toFixed(1)}" y1="${(cy - r1 * Math.cos(a)).toFixed(1)}" x2="${(cx + r2 * Math.sin(a)).toFixed(1)}" y2="${(cy - r2 * Math.cos(a)).toFixed(1)}" stroke="${red ? '#c2410c' : '#3b2a14'}" stroke-width="${i % 2 ? 1.2 : 2}"/>`; }
+    const lab = ['-20', '-10', '-5', '0', '+3'].map((t, i) => { const a = (-45 + i * 22.5) * Math.PI / 180; return `<text x="${(cx + (R - 26) * Math.sin(a)).toFixed(1)}" y="${(cy - (R - 26) * Math.cos(a) + 3).toFixed(1)}" font-size="8" text-anchor="middle" fill="${i >= 3 ? '#c2410c' : '#3b2a14'}" font-family="Helvetica,Arial">${t}</text>`; }).join('');
+    const base = -45 + Math.min(1, vol || 0) * 40;
+    return `<g><rect x="${x}" y="20" width="160" height="104" rx="8" fill="url(#vuG)" stroke="#5b4526" stroke-width="2"/>
+      <path d="M${cx - R + 8} ${cy - 40} A ${R} ${R} 0 0 1 ${cx + R - 8} ${cy - 40}" fill="none" stroke="#3b2a14" stroke-width="1"/>
+      <path d="M${cx + 0.53 * (R - 8)} ${cy - 0.85 * (R - 8)} A ${R - 8} ${R - 8} 0 0 1 ${cx + 0.77 * (R - 8)} ${cy - 0.64 * (R - 8)}" stroke="#c2410c" stroke-width="5" fill="none" opacity=".75"/>
+      ${sc}${lab}<text x="${cx}" y="${cy - 22}" font-size="11" text-anchor="middle" fill="#3b2a14" font-weight="700" font-family="Helvetica,Arial" letter-spacing="2">VU</text>
+      <g class="${play ? 'nd' : ''}" style="transform-origin:${cx}px ${cy}px;transform:rotate(${base}deg);animation-delay:${delay}s;--b:${base}deg"><line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - R + 4}" stroke="#111" stroke-width="1.8" stroke-linecap="round"/></g>
+      <rect x="${x}" y="100" width="160" height="24" rx="0" fill="#2a1d0e" opacity=".9"/><circle cx="${cx}" cy="${cy}" r="7" fill="#1a1209"/>
+      <text x="${cx}" y="118" font-size="8" text-anchor="middle" fill="#d6b56b" font-family="Helvetica,Arial" letter-spacing="1.5">${id}</text></g>`;
+  };
+  return `<svg viewBox="0 0 360 140" style="width:100%;display:block"><defs>
+    <radialGradient id="vuG" cx="50%" cy="85%" r="90%"><stop offset="0" stop-color="${play ? '#ffe2a3' : '#d9c79c'}"/><stop offset=".6" stop-color="${play ? '#f5c46a' : '#b9a57a'}"/><stop offset="1" stop-color="${play ? '#c98a2c' : '#7e6d4c'}"/></radialGradient>
+    <linearGradient id="vuP" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#26272b"/><stop offset="1" stop-color="#111214"/></linearGradient></defs>
+    <rect x="0" y="0" width="360" height="140" rx="12" fill="url(#vuP)" stroke="rgba(255,255,255,.08)"/>
+    <text x="16" y="14" font-size="8" letter-spacing="2" fill="#8b8f96" font-family="Helvetica,Arial" font-weight="700">${brand || ''}</text>
+    ${one(16, 'LEFT', 0)}${one(184, 'RIGHT', -0.37)}
+    <style>.nd{animation:vu .9s cubic-bezier(.3,1.6,.4,1) infinite alternate}@keyframes vu{0%{transform:rotate(var(--b))}18%{transform:rotate(calc(var(--b) + 22deg))}33%{transform:rotate(calc(var(--b) + 6deg))}52%{transform:rotate(calc(var(--b) + 34deg))}70%{transform:rotate(calc(var(--b) + 12deg))}86%{transform:rotate(calc(var(--b) + 28deg))}100%{transform:rotate(calc(var(--b) + 9deg))}}</style></svg>`;
+}
 function ampSvg({ on, play, vol, srcIdx, srcN, text, finish, brand }) {
   const silver = finish !== 'black';
   const face = silver ? ['#e9edf0', '#c3c9ce', '#9aa2a8'] : ['#3a3f44', '#24282c', '#16191c'];
@@ -175,7 +200,7 @@ class ReceiverCard extends HTMLElement {
 </style>
 <ha-card class="${on ? '' : 'off'}"><div class="bgimg"></div>
 <div class="hd"><ha-icon icon="mdi:speaker"></ha-icon>${esc(c.name || ya.friendly_name)}<button class="pw ${on ? 'on' : ''}" data-a="pw" title="Accendi / spegni"><ha-icon icon="mdi:power"></ha-icon></button></div>
-<div class="ampw" data-a="info">${c.image ? `<img src="${c.image}" alt="" style="display:block;width:100%;max-height:120px;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))">` : ampSvg({ brand: c.brand, on, play, vol: muted ? 0 : vol, srcIdx: Math.max(0, list.indexOf(src)), srcN: list.length, finish: c.finish, text: on ? (SRC_NAME[src] || src || '').toUpperCase() + (ma.media_title ? '  ' + ma.media_title.slice(0, 26) : '') : '' })}</div>
+<div class="ampw" data-a="info">${c.vu ? vuSvg({ play, vol: muted ? 0 : vol, brand: c.brand }) : c.image ? `<img src="${c.image}" alt="" style="display:block;width:100%;max-height:120px;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))">` : ampSvg({ brand: c.brand, on, play, vol: muted ? 0 : vol, srcIdx: Math.max(0, list.indexOf(src)), srcN: list.length, finish: c.finish, text: on ? (SRC_NAME[src] || src || '').toUpperCase() + (ma.media_title ? '  ' + ma.media_title.slice(0, 26) : '') : '' })}</div>
 <div class="hero" data-a="info">
   ${pic ? '<div class="cv"></div>' : ''}
   <div class="i">${on && src ? `<span class="badge"><ha-icon icon="${SRC_ICON[src] || 'mdi:import'}"></ha-icon>${esc(SRC_NAME[src] || src)}</span>` : ''}
