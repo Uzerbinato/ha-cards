@@ -242,21 +242,64 @@ customElements.define('meter-card', MeterCard);
 // finestra-card: pagina a schermo intero per la TV della sala riunioni (copre barre e menu)
 //   config: title, text, videos: [{src, season, from, to}] (in arrivo)
 class FinestraCard extends HTMLElement {
-  setConfig(c) { this._c = c || {}; if (!this.shadowRoot) this.attachShadow({ mode: 'open' }); this._r(); }
-  set hass(h) {}
+  // config: folder (default 'Finestra'), video (URL fisso, facoltativo), title, text, change_minutes (default 20)
+  setConfig(c) { this._c = Object.assign({ folder: 'Finestra', change_minutes: 20 }, c || {}); if (!this.shadowRoot) this.attachShadow({ mode: 'open' }); this._built = false; }
+  set hass(h) { this._h = h; if (!this._built) { this._build(); this._built = true; this._pick(); clearInterval(this._iv2); this._iv2 = setInterval(() => this._pick(), 60000); } }
   getCardSize() { return 8; }
-  _r() {
-    const c = this._c;
+  _season(d) { const m = d.getMonth() + 1, g = d.getDate(), k = m * 100 + g; return k >= 321 && k < 621 ? 'primavera' : k >= 621 && k < 923 ? 'estate' : k >= 923 && k < 1221 ? 'autunno' : 'inverno'; }
+  _moment(d) {
+    const s = this._h && this._h.states['sun.sun']; const now = d.getTime();
+    if (s && s.attributes.next_rising && s.attributes.next_setting) {
+      let rise = Date.parse(s.attributes.next_rising), set = Date.parse(s.attributes.next_setting);
+      if (rise - now > 12 * 36e5) rise -= 864e5; if (set - now > 12 * 36e5) set -= 864e5;
+      if (Math.abs(now - rise) <= 75 * 6e4) return 'alba';
+      if (Math.abs(now - set) <= 75 * 6e4) return 'tramonto';
+      return s.state === 'above_horizon' ? 'giorno' : 'notte';
+    }
+    const hh = d.getHours(); return hh < 6 ? 'notte' : hh < 8 ? 'alba' : hh < 17 ? 'giorno' : hh < 19 ? 'tramonto' : 'notte';
+  }
+  async _ls(id) { try { const r = await this._h.callWS({ type: 'media_source/browse_media', media_content_id: id }); return r.children || []; } catch (e) { return []; } }
+  async _videos(season, moment) {
+    const root = 'media-source://media_source/local/' + this._c.folder;
+    const seasons = await this._ls(root); const sf = seasons.find((x) => x.title.toLowerCase() === season); if (!sf) return { list: [], moment };
+    const moms = await this._ls(sf.media_content_id);
+    const order = { alba: ['alba', 'giorno', 'tramonto', 'notte'], giorno: ['giorno', 'alba', 'tramonto', 'notte'], tramonto: ['tramonto', 'giorno', 'notte', 'alba'], notte: ['notte', 'tramonto', 'alba', 'giorno'] }[moment];
+    for (const m of order) { const mf = moms.find((x) => x.title.toLowerCase() === m); if (!mf) continue; const v = (await this._ls(mf.media_content_id)).filter((x) => !x.can_expand); if (v.length) return { list: v, moment: m }; }
+    return { list: [], moment };
+  }
+  async _pick() {
+    const c = this._c, d = new Date();
+    if (c.video) { this._show(c.video, ''); return; }
+    const season = this._season(d), moment = this._moment(d);
+    const slot = season + '/' + moment, due = !this._since || Date.now() - this._since > c.change_minutes * 6e4;
+    if (slot === this._slot && !due) return;
+    const { list } = await this._videos(season, moment);
+    if (!list.length) { this._wait(season, moment); this._slot = slot; return; }
+    const pick = list.length > 1 ? list.filter((x) => x.media_content_id !== this._cur)[Math.floor(Math.random() * (list.length - 1))] : list[0];
+    if (pick.media_content_id === this._cur && slot === this._slot) { this._since = Date.now(); return; }
+    try { const r = await this._h.callWS({ type: 'media_source/resolve_media', media_content_id: pick.media_content_id }); this._cur = pick.media_content_id; this._slot = slot; this._since = Date.now(); this._show(r.url, pick.title.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')); } catch (e) {}
+  }
+  _build() {
     this.shadowRoot.innerHTML = `<style>
-      .fs{position:fixed;inset:0;z-index:2147483000;background:radial-gradient(120% 90% at 50% 30%,#1b2a33 0%,#0b1114 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#e6edf3;font-family:var(--primary-font-family,sans-serif);text-align:center}
-      .fs h1{font-size:4.2vw;font-weight:300;margin:0 0 1.2vw;letter-spacing:.02em}.fs p{font-size:1.6vw;color:#9fb3bd;max-width:60vw;margin:0}
-      .fs .t{position:absolute;bottom:3vw;right:4vw;font-size:3vw;font-weight:200;color:#cbd5e1}
-          .fs video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-      .fs .t{z-index:2;text-shadow:0 2px 12px rgba(0,0,0,.6)}
-    </style><div class="fs">${c.video ? `<video src="${c.video}" autoplay muted loop playsinline></video>` : `<h1>${c.title || 'Sala riunioni'}</h1><p>${c.text || ''}</p>`}<div class="t" id="t"></div></div>`;
-    const t = this.shadowRoot.getElementById('t');
-    const tick = () => { t.textContent = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); };
+      .fs{position:fixed;inset:0;z-index:2147483000;background:#000;overflow:hidden;color:#e6edf3;font-family:var(--primary-font-family,sans-serif)}
+      video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 4s ease}
+      video.on{opacity:1}
+      .msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(120% 90% at 50% 30%,#1b2a33 0%,#0b1114 70%);transition:opacity 2s}
+      .msg h1{font-size:4.2vw;font-weight:300;margin:0 0 1.2vw}.msg p{font-size:1.6vw;color:#9fb3bd;max-width:60vw;margin:0}
+      .t{position:absolute;bottom:3vw;right:4vw;font-size:3vw;font-weight:200;color:#f1f5f9;text-shadow:0 2px 14px rgba(0,0,0,.7);z-index:3}
+      .cap{position:absolute;bottom:3.4vw;left:4vw;font-size:1.1vw;letter-spacing:.2em;text-transform:uppercase;color:rgba(241,245,249,.75);text-shadow:0 2px 10px rgba(0,0,0,.7);z-index:3;transition:opacity 3s}
+    </style><div class="fs"><video id="a" muted loop playsinline autoplay></video><video id="b" muted loop playsinline autoplay></video>
+      <div class="msg" id="m"><h1>${this._c.title || 'Sala riunioni'}</h1><p id="mt">${this._c.text || ''}</p></div><div class="cap" id="cap"></div><div class="t" id="t"></div></div>`;
+    const t = this.shadowRoot.getElementById('t'); const tick = () => { t.textContent = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); };
     tick(); clearInterval(this._iv); this._iv = setInterval(tick, 10000);
+  }
+  _wait(season, moment) { const m = this.shadowRoot.getElementById('m'); m.style.opacity = 1; this.shadowRoot.getElementById('mt').textContent = `Nessun video per ${season} · ${moment}: aggiungilo nella cartella ${this._c.folder}/${season}/${moment} del NAS.`; }
+  _show(url, cap) {
+    const R = this.shadowRoot, a = R.getElementById('a'), b = R.getElementById('b');
+    const front = a.classList.contains('on') ? a : b.classList.contains('on') ? b : null, back = front === a ? b : a;
+    back.src = url; back.load();
+    const go = () => { back.play().catch(() => {}); back.classList.add('on'); if (front) front.classList.remove('on'); R.getElementById('m').style.opacity = 0; const cp = R.getElementById('cap'); cp.style.opacity = 0; setTimeout(() => { cp.textContent = cap; cp.style.opacity = 1; }, 1500); if (front) setTimeout(() => { front.pause(); front.removeAttribute('src'); front.load(); }, 4500); };
+    back.oncanplay = () => { back.oncanplay = null; go(); };
   }
 }
 customElements.define('finestra-card', FinestraCard);
