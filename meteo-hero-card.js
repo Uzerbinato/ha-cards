@@ -97,7 +97,7 @@ class MeteoHeroCard extends HTMLElement {
       return `<div class="day">${GG[dd.getDay()]}${icon(d.condition, true)}<b>${Math.round(d.temperature)}\u00B0</b><span>${d.templow != null ? Math.round(d.templow) + '\u00B0' : ''}</span></div>`;
     }).join('');
     const _su = (this._hass.states[c.solar] || {attributes:{}}).attributes.unit_of_measurement;
-    let solar = this._num(c.solar, 1); if (solar != null && _su === 'W') solar = solar >= 1000 ? (solar / 1000).toFixed(1).replace('.', ',') + ' kW' : Math.round(solar) + ' W'; else if (solar != null) solar = solar + ' kW';
+    let solar = this._num(c.solar, 1); const _sv = c.solar && this._hass.states[c.solar] ? parseFloat(this._hass.states[c.solar].state) : NaN; if (solar != null && _su === 'W') solar = _sv >= 1000 ? (_sv / 1000).toFixed(1).replace('.', ',') + ' kW' : Math.round(_sv) + ' W'; else if (solar != null) solar = solar + ' kW';
     const batt = this._num(c.battery, 0);
     const key = [saluto, ora, data, cond, temp, minmax, next, solar, batt].join('|');
     if (!force && key === this._key) return;
