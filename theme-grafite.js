@@ -71,7 +71,7 @@
     const se = document.scrollingElement || document.documentElement;
     const r = se.scrollHeight / Math.max(1, se.clientHeight);
     let nz = z;
-    if (r > 1.01) nz = z / r * 0.99; else if (r < 0.93 && z < 0.8) nz = Math.min(0.8, z / r * 0.98);
+    if (r > 1.01) nz = z / r * 0.99; else if (r < 0.98 && z < 1) nz = Math.min(1, z / r * 0.99);
     nz = Math.max(0.35, Math.round(nz * 1000) / 1000);
     if (Math.abs(nz - z) > 0.004) { z = nz; st.textContent = 'html{zoom:' + z + '}'; }
   };
