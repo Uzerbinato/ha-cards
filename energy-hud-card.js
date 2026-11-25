@@ -158,7 +158,7 @@ ${c.ev ? node(c.ev, 272, 270, 22, C.ev, I.ev, ev === null && evSoc !== null ? 0 
 </svg>`;
 const pct = fc ? Math.min(100, pvToday / fc * 100) : 0;
 const st = (k, v, u, id, bar, col) => `<div class="st" data-e="${id || ''}"><div class="k">${k}</div><div class="v">${v}<small>${u}</small></div>${bar !== undefined ? `<div class="bar"><b style="width:${bar}%;background:${col};box-shadow:0 0 8px ${col}"></b></div>` : ''}</div>`;
-const html = `<ha-card style="${c.scale ? "zoom:" + c.scale : ""}"><div class="grid"></div>
+const html = `${c.scale ? "<style>.lbl{font-size:12.5px!important;letter-spacing:1.4px}svg text:not(.num):not(.lbl){font-size:10.5px}.st .k{font-size:12.5px!important}.st .v{font-size:22px!important}.ttl,.live{font-size:13px!important}</style>" : ""}<ha-card style="${c.scale ? "zoom:" + c.scale : ""}"><div class="grid"></div>
 <div class="hdr"><div class="ttl">${c.title}</div><div class="live"><i></i>live</div></div>
 <div class="stats">
 ${st('Prodotta oggi', pvToday.toFixed(1).replace('.', ','), 'kWh', (c.solar_today || [])[0], pct, C.pv)}
