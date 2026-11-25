@@ -73,7 +73,7 @@
     if (!ct) return;
     const r = (ct.getBoundingClientRect().bottom + 12) / Math.max(1, window.innerHeight);
     let nz = z;
-    if (r > 1.0) nz = z / r * 0.985; else if (r < 0.94 && z < 1) nz = Math.min(1, z / r * 0.985);
+    if (r > 1.0) nz = z / r * 0.985; else if (r < 0.95 && z < 1.4) nz = Math.min(1.4, z / r * 0.985);
     nz = Math.max(0.35, Math.round(nz * 1000) / 1000);
     if (Math.abs(nz - z) > 0.015) { z = nz; st.textContent = 'html{zoom:' + z + '}'; }
   };
