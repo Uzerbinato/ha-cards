@@ -1,6 +1,6 @@
 // room-climate-card
 // Card per stanza: temperatura grande, umidità piccola, +/- sul setpoint.
-// config: entity (climate.*), name, temperature_sensor?, humidity_sensor?, step?
+// config: entity (climate.*), name, temperature_sensor?, humidity_sensor?, step?, readonly? (solo lettura, senza +/-: per la TV)
 class RoomClimateCard extends HTMLElement {
   setConfig(config) {
     if (!config.entity) throw new Error('entity richiesta');
@@ -74,6 +74,8 @@ class RoomClimateCard extends HTMLElement {
         .target small { font-size: 10px; color: #6f8590; font-weight: 400; letter-spacing: 1px; text-transform: uppercase; }
         .target.pending { color: #ffc070; }
         .heat .target:not(.pending) { color: #ffb070; }
+        ha-card.ro .set { justify-content: center; padding: 7px 3px; }
+        ha-card.ro button { display: none; }
       </style>
       <ha-card>
         <div class="top"><div class="name"></div><div class="badge"><ha-icon></ha-icon><span></span></div></div>
@@ -122,7 +124,7 @@ class RoomClimateCard extends HTMLElement {
     const card = r.querySelector('ha-card');
     r.querySelector('.name').textContent = c.name || st?.attributes.friendly_name || c.entity;
     if (!st || st.state === 'unavailable') {
-      card.className = 'off';
+      card.className = 'off' + (c.readonly ? ' ro' : '');
       r.querySelector('.big').innerHTML = '–';
       r.querySelector('.target').textContent = 'non disponibile';
       return;
@@ -133,7 +135,7 @@ class RoomClimateCard extends HTMLElement {
     const action = a.hvac_action;
     const off = st.state === 'off';
     const mode = off ? 'off' : (action === 'heating' ? 'heat' : action === 'cooling' ? 'cool' : 'idle');
-    card.className = mode;
+    card.className = mode + (c.readonly ? ' ro' : '');
 
     r.querySelector('.big').innerHTML = `${this._fmt(cur)}<span class="deg">°</span>`;
     const h = r.querySelector('.hum');
@@ -150,7 +152,7 @@ class RoomClimateCard extends HTMLElement {
     if (this._pending !== null && this._sentAt && Math.abs((a.temperature ?? -99) - this._pending) < 0.05) { this._pending = null; this._sentAt = null; }
     const target = this._pending ?? a.temperature;
     t.classList.toggle('pending', this._pending !== null);
-    t.innerHTML = `<small>${off ? 'spento' : 'imposta'}</small>${this._fmt(target)}°`;
+    t.innerHTML = `<small>${off ? 'spento' : c.readonly ? 'impostata' : 'imposta'}</small>${this._fmt(target)}°`;
   }
 }
 customElements.define('room-climate-card', RoomClimateCard);
