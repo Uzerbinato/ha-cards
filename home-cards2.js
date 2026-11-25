@@ -141,7 +141,7 @@ class HeatpumpCard extends Base {
 .tank .sp{width:110px;height:34px;flex:none}
 </style><ha-card>
 <div class="hd"><ha-icon icon="mdi:heat-pump-outline"></ha-icon>Pompa di calore<span class="r">${c.outside ? 'esterno ' + num(st(c.outside)) + '°' : ''}</span></div>
-<div class="top">${unit}<div class="i"><div class="big">${run ? (c.frequency ? hz.toFixed(0) + '<small>Hz</small>' : 'In funzione') : 'Ferma'}</div><div class="sub">${status}</div>
+<div class="top">${c.image === false ? '' : unit}<div class="i"><div class="big">${run ? (c.frequency ? hz.toFixed(0) + '<small>Hz</small>' : 'In funzione') : 'Ferma'}</div><div class="sub">${status}</div>
 <div class="ch">${!isNaN(pw) ? `<span><ha-icon icon="mdi:flash"></ha-icon>${pw >= 1000 ? num(pw / 1000, 2) + ' kW' : num(pw, 0) + ' W'}</span>` : ''}${c.flow ? `<span><ha-icon icon="mdi:thermometer-chevron-up"></ha-icon>${num(st(c.flow))}° / ${num(st(c.return))}°</span>` : ''}${c.today ? `<span><ha-icon icon="mdi:counter"></ha-icon>oggi ${num(st(c.today))} kWh</span>` : ''}</div></div></div>
 <div class="cs">${circ}</div>
 ${c.tank ? `<div class="tank" data-e="${c.water_heater || c.tank}"><div class="tb"><div style="height:${tankPct}%"></div></div><div class="tt"><b>${num(tank)}°</b> <small>acqua calda</small><div>${whMode ? 'Modalità ' + esc(whMode) : ''}${dhw && run ? ' · in riscaldamento' : ''}</div></div>${spark(hd[c.tank], tankCol, 110, 34)}</div>` : ''}

@@ -22,8 +22,8 @@ const INK = { black: '#2b2f36', grey: '#6b7280', 'blue-grey': '#4b5563', cyan: '
 
 // tachimetro: arco 240°, tacche, zona colorata e lancetta
 const TACHO_CSS = `.tc{position:relative;text-align:center;padding:8px 4px 6px;border-radius:16px;background:radial-gradient(circle at 50% 60%,rgba(255,255,255,.05),rgba(148,163,184,.04) 70%);border:1px solid rgba(148,163,184,.1);cursor:pointer}
-  .tc svg{width:100%;max-width:84px;height:auto;display:block;margin:0 auto}
-  .tc .tv{position:absolute;left:0;right:0;top:56%;font-size:14px;font-weight:600;color:var(--primary-text-color);line-height:1} .tc .tv small{font-size:11px;color:var(--secondary-text-color);font-weight:500}
+  .tc svg{width:100%;max-width:64px;height:auto;display:block;margin:0 auto}
+  .tc .tv{position:absolute;left:0;right:0;top:54%;font-size:12px;font-weight:600;color:var(--primary-text-color);line-height:1} .tc .tv small{font-size:11px;color:var(--secondary-text-color);font-weight:500}
   .tc .tl{font-size:12px;color:var(--secondary-text-color);margin-top:-6px}
   .tc .nd{transition:transform .8s cubic-bezier(.3,1.4,.5,1)}`;
 const tacho = (v, max, col, warn, alarm) => {
@@ -126,7 +126,7 @@ class NetCard extends HTMLElement {
       .row{display:flex;justify-content:space-between;gap:10px;margin-top:12px;font-size:13px;color:var(--secondary-text-color)}
       .row b{color:var(--primary-text-color);font-weight:600}
       .flow{stroke-dasharray:4 6;animation:f 1.2s linear infinite} @keyframes f{to{stroke-dashoffset:-20}}
-    </style><ha-card><div class="top"><div class="art">${c.image ? `<img src="${esc(c.image)}" alt="" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))">` : `
+    </style><ha-card><div class="top"><div class="art" style="${c.image === false ? 'display:none' : ''}">${c.image ? `<img src="${esc(c.image)}" alt="" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))">` : `
       <svg viewBox="0 0 150 96"><path class="${flow}" d="M24 30 C50 30 52 58 74 58" stroke="${net ? '#38bdf8' : '#f87171'}" stroke-width="2.5" fill="none"/>
         <path class="${rt ? 'flow' : ''}" d="M100 58 C118 58 120 34 132 34" stroke="${rt ? '#34d399' : '#f87171'}" stroke-width="2.5" fill="none"/>
         <circle cx="18" cy="28" r="14" fill="rgba(56,189,248,.14)" stroke="${net ? '#38bdf8' : '#f87171'}" stroke-width="2"/><path d="M8 28h20M18 14c-6 8-6 20 0 28M18 14c6 8 6 20 0 28" stroke="${net ? '#7dd3fc' : '#fca5a5'}" stroke-width="1.6" fill="none"/>
@@ -540,7 +540,7 @@ ha-card{background:${BG};border:1px solid rgba(140,200,255,.10);border-radius:20
       }
       const wk = '<div class="wk">' + days.map((x) => '<div class="d' + (x.t.length ? "" : " none") + '"><div class="g">' + x.g + '</div><div class="n">' + x.n + "</div>" + (x.t.length ? x.t.map((t) => '<div class="p" title="' + esc(t) + '" style="background:' + ((WASTE[t] || {}).b || "#475569") + '">' + wIcon(t, 30) + "</div>").join("") + '<div class="t">' + esc(x.t.join(" + ")) + "</div>" : '<div class="x">\u2014</div>') + "</div>").join("") + "</div>";
       this.shadowRoot.innerHTML = "<style>" + CSS_W + "</style><ha-card>" + top + wk + "</ha-card>";
-      this.shadowRoot.querySelector("ha-card").onclick = () => {
+      (this.shadowRoot.querySelector("ha-card") || {}).onclick = () => {
         const e = new Event("hass-more-info", { bubbles: true, composed: true });
         e.detail = { entityId: c.week };
         this.dispatchEvent(e);
