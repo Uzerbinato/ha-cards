@@ -73,7 +73,7 @@ class PrinterCard extends HTMLElement {
       .cmp .art{width:110px;height:96px}
       .cmp .hd{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}.cmp .hd .name{flex:1 1 100%;min-width:0}.cmp .hd .pill{margin-left:0!important}.cmp .pill{margin-top:0}
       .cmp .inks{margin-top:10px;gap:4px}.cmp .iname{font-size:10px;overflow:hidden;text-overflow:ellipsis;max-width:100%}.cmp .cart{height:44px;max-width:30px}
-    </style><ha-card>${c.compact ? `<div class="cmp" style="grid-template-columns:${c.image === false ? 'auto' : (inks.length > 4 ? 84 : 110) + 'px'} 1fr"><div style="display:flex;flex-direction:column;align-items:center;gap:4px">${c.image === false ? '' : `<div class="art" style="width:${inks.length > 4 ? 84 : 110}px;height:72px">${art}</div>`}<div class="pill ${lab[1]}" style="margin:0"><span class="dot"></span>${esc(lab[0])}</div>${ppill.replace('margin-left:6px', 'margin:0')}</div><div style="min-width:0">
+    </style><ha-card>${c.compact ? `<div class="cmp" style="grid-template-columns:${c.image === false ? 'auto' : (inks.length > 4 ? 84 : 110) + 'px'} 1fr"><div style="display:flex;flex-direction:column;align-items:center;gap:4px">${c.image === false ? '' : `<div class="art" style="width:${inks.length > 4 ? 84 : 110}px;height:72px">${art}</div>`}<div class="pill ${lab[1]}" style="margin:0"><span class="dot"></span>${esc(lab[0])}</div>${ppill.replace('margin-left:6px', 'margin:0;white-space:nowrap')}</div><div style="min-width:0">
       <div class="hd"><div class="name">${esc(c.name || (s && s.attributes.friendly_name) || c.entity)}</div></div>` : `<div class="top"><div class="art">${art}</div><div class="meta">
       <div class="name">${esc(c.name || (s && s.attributes.friendly_name) || c.entity)}</div>
       <div class="sub">${esc(c.subtitle || (c.model === 'plotter' ? 'Plotter grande formato' : 'Multifunzione a colori'))}</div>
@@ -590,7 +590,7 @@ ha-card{background:${BG};border:1px solid rgba(140,200,255,.10);border-radius:20
         days.push({ g: GG[d.getDay()], n: d.getDate(), t: f ? f.t : [] });
       }
       const wk = '<div class="wk">' + days.map((x) => '<div class="d' + (x.t.length ? "" : " none") + '"><div class="g">' + x.g + '</div><div class="n">' + x.n + "</div>" + (x.t.length ? x.t.map((t) => '<div class="p" title="' + esc(t) + '" style="background:' + ((WASTE[t] || {}).b || "#475569") + '">' + wIcon(t, 30) + "</div>").join("") + '<div class="t">' + esc(x.t.join(" + ")) + "</div>" : '<div class="x">\u2014</div>') + "</div>").join("") + "</div>";
-      this.shadowRoot.innerHTML = "<style>" + CSS_W + "</style><ha-card>" + top + wk + "</ha-card>";
+      this.shadowRoot.innerHTML = "<style>" + CSS_W + "</style><ha-card style=\"" + (this._c.scale ? "zoom:" + this._c.scale : "") + "\">" + top + wk + "</ha-card>";
       (this.shadowRoot.querySelector("ha-card") || {}).onclick = () => {
         const e = new Event("hass-more-info", { bubbles: true, composed: true });
         e.detail = { entityId: c.week };
