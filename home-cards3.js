@@ -110,6 +110,16 @@ class ReceiverCard extends HTMLElement {
     const k = ids.map((i) => { const s = h.states[i]; if (!s) return ''; const a = s.attributes; return [s.state, a.media_title, a.media_artist, a.entity_picture, a.volume_level, a.is_volume_muted, a.source, a.sound_mode, a.media_position_updated_at].join('~'); }).join('|');
     if (k !== this._k) { this._k = k; this._render(); }
   }
+  // copertina cercata su iTunes quando la sorgente (es. Bluetooth) non la fornisce
+  _art(a) {
+    const t = (a.media_title || '').replace(/\s*[\(\[].*?(remaster|live|version|edit|mix|deluxe).*?[\)\]]/ig, '').trim(), ar = (a.media_artist || '').trim();
+    if (!t) return ''; const k = ar + '|' + t; this._artC = this._artC || {};
+    if (k in this._artC) return this._artC[k];
+    this._artC[k] = '';
+    fetch('https://itunes.apple.com/search?entity=song&limit=1&country=it&term=' + encodeURIComponent(ar + ' ' + t))
+      .then((r) => r.json()).then((j) => { const u = j.results && j.results[0] && j.results[0].artworkUrl100; if (u) { this._artC[k] = u.replace('100x100bb', '600x600bb'); this._k = null; this._render(); } }).catch(() => {});
+    return '';
+  }
   // sceglie da quale lettore prendere copertina e titolo (Music Assistant se sta suonando lui)
   _media() {
     const h = this._h, c = this._c, y = h.states[c.entity], m = c.music_assistant && h.states[c.music_assistant];
@@ -200,7 +210,7 @@ class ReceiverCard extends HTMLElement {
 </style>
 <ha-card class="${on ? '' : 'off'}"><div class="bgimg"></div>
 <div class="hd"><ha-icon icon="mdi:speaker"></ha-icon>${esc(c.name || ya.friendly_name)}<button class="pw ${on ? 'on' : ''}" data-a="pw" title="Accendi / spegni"><ha-icon icon="mdi:power"></ha-icon></button></div>
-<div class="ampw" data-a="info">${c.cover ? (ma.entity_picture ? `<div style="height:150px;border-radius:14px;background:center/cover url('${ma.entity_picture}');box-shadow:0 12px 28px rgba(0,0,0,.5)"></div>` : `<div style="height:150px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#f5b544,#9a3412);box-shadow:0 12px 28px rgba(0,0,0,.5)"><ha-icon icon="mdi:music" style="--mdc-icon-size:64px;color:rgba(26,18,6,.8)"></ha-icon></div>`) : c.vu ? vuSvg({ play, vol: muted ? 0 : vol, brand: c.brand }) : c.image ? `<img src="${c.image}" alt="" style="display:block;width:100%;max-height:120px;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))">` : ampSvg({ brand: c.brand, on, play, vol: muted ? 0 : vol, srcIdx: Math.max(0, list.indexOf(src)), srcN: list.length, finish: c.finish, text: on ? (SRC_NAME[src] || src || '').toUpperCase() + (ma.media_title ? '  ' + ma.media_title.slice(0, 26) : '') : '' })}</div>
+<div class="ampw" data-a="info">${c.cover ? ((ma.entity_picture || this._art(ma)) ? `<div style="height:150px;border-radius:14px;background:center/cover url('${ma.entity_picture || this._art(ma)}');box-shadow:0 12px 28px rgba(0,0,0,.5)"></div>` : `<div style="height:150px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#f5b544,#9a3412);box-shadow:0 12px 28px rgba(0,0,0,.5)"><ha-icon icon="mdi:music" style="--mdc-icon-size:64px;color:rgba(26,18,6,.8)"></ha-icon></div>`) : c.vu ? vuSvg({ play, vol: muted ? 0 : vol, brand: c.brand }) : c.image ? `<img src="${c.image}" alt="" style="display:block;width:100%;max-height:120px;object-fit:contain;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))">` : ampSvg({ brand: c.brand, on, play, vol: muted ? 0 : vol, srcIdx: Math.max(0, list.indexOf(src)), srcN: list.length, finish: c.finish, text: on ? (SRC_NAME[src] || src || '').toUpperCase() + (ma.media_title ? '  ' + ma.media_title.slice(0, 26) : '') : '' })}</div>
 <div class="hero" data-a="info">
   ${pic ? '<div class="cv"></div>' : ''}
   <div class="i">${on && src ? `<span class="badge"><ha-icon icon="${SRC_ICON[src] || 'mdi:import'}"></ha-icon>${esc(SRC_NAME[src] || src)}</span>` : ''}
