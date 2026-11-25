@@ -76,4 +76,19 @@
     if (Math.abs(nz - z) > 0.004) { z = nz; st.textContent = 'html{zoom:' + z + '}'; }
   };
   setInterval(fit, 3000);
+  // testi piccoli più leggibili da lontano: ingrandisce del 22% i testi HTML sotto i 15 px (non gli SVG)
+  const seen = new WeakSet();
+  const boost = (root) => {
+    const all = root.querySelectorAll ? root.querySelectorAll('*') : [];
+    for (const el of all) {
+      if (el.shadowRoot) boost(el.shadowRoot);
+      if (seen.has(el) || el instanceof SVGElement) continue;
+      seen.add(el);
+      const hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (!hasText) continue;
+      const fs = parseFloat(getComputedStyle(el).fontSize);
+      if (fs && fs < 15) el.style.setProperty('font-size', (fs * 1.22).toFixed(1) + 'px', 'important');
+    }
+  };
+  setInterval(() => boost(document), 2500);
 })();
