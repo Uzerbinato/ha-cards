@@ -1024,3 +1024,19 @@ ha-card.act{border-color:rgba(248,113,113,.45);box-shadow:0 10px 30px rgba(220,3
 })();
 
 })();
+
+/* ---- prova formati video sulla TV (temporanea) ---- */
+class VideoTestCard extends HTMLElement {
+  setConfig(c) { this._c = c; }
+  set hass(h) {
+    if (this._b) return; this._b = true; const base = this._c.base;
+    const items = [['1 AVIF animata 720p', 'img', 't1.avif'], ['2 WebP animata 540p', 'img', 't2.webp'], ['3 VP8 360p', 'video', 't3.webm'], ['4 VP9 360p', 'video', 't4.webm'], ['5 H.264 720p', 'video', 't5.mp4'], ['6 VP9 720p', 'video', 't6.webm']];
+    const R = this.attachShadow({ mode: 'open' });
+    R.innerHTML = '<style>.g{position:fixed;inset:0;z-index:2147483000;background:#203040;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:1vw;padding:1vw}.c{position:relative;background:#000;overflow:hidden}.c img,.c video{width:100%;height:100%;object-fit:cover}.l{position:absolute;left:0;top:0;right:0;font:bold 1.7vw sans-serif;color:#ff0;background:rgba(0,0,0,.65);padding:.4vw .7vw}</style><div class="g">' +
+      items.map(([l, t, f], i) => `<div class="c">${t === 'img' ? `<img id="e${i}" src="${base}${f}">` : `<video id="e${i}" src="${base}${f}" muted loop autoplay playsinline></video>`}<div class="l" id="l${i}">${l}</div></div>`).join('') + '</div>';
+    setInterval(() => items.forEach(([l, t], i) => { const e = R.getElementById('e' + i), L = R.getElementById('l' + i);
+      L.textContent = l + ' — ' + (t === 'img' ? (e.complete ? (e.naturalWidth ? 'ok ' + e.naturalWidth + 'px' : 'ERRORE') : 'carico…') : ('w=' + e.videoWidth + ' t=' + e.currentTime.toFixed(1) + (e.error ? ' ERR' + e.error.code : ''))); }), 1000);
+  }
+  getCardSize() { return 8; }
+}
+customElements.define('video-test-card', VideoTestCard);
