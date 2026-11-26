@@ -280,8 +280,15 @@ class MediaTvCard extends HTMLElement {
     if (k === this._k && k2 !== this._k2) { this._k2 = k2; this._render(); }
     if (k !== this._k) { this._k = k; this._k2 = k2; this._t0 = Date.now(); this._render(); this._lookup(a); }
     else this._tick(); }
-  connectedCallback() { clearInterval(this._iv); this._iv = setInterval(() => this._tick(), 1000); }
-  disconnectedCallback() { clearInterval(this._iv); }
+  connectedCallback() { clearInterval(this._iv); this._iv = setInterval(() => this._tick(), 1000);
+    if (!this._kh) this._kh = (e) => { if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return; const st = this.shadowRoot && this.shadowRoot.getElementById('story'); if (!st || !this.isConnected) return;
+      e.preventDefault(); e.stopPropagation(); st.scrollBy({ top: (e.key === 'ArrowDown' ? 1 : -1) * st.clientHeight * 0.7, behavior: 'smooth' }); setTimeout(() => this._mask(), 450); };
+    window.addEventListener('keydown', this._kh, true); }
+  disconnectedCallback() { clearInterval(this._iv); window.removeEventListener('keydown', this._kh, true); }
+  _mask() { const R = this.shadowRoot, st = R && R.getElementById('story'), hn = R && R.getElementById('hint'); if (!st) return;
+    const more = st.scrollHeight - st.clientHeight > 4, atTop = st.scrollTop < 4, atEnd = st.scrollTop + st.clientHeight >= st.scrollHeight - 4;
+    st.className = 'story' + (!more ? ' all' : atTop ? '' : atEnd ? ' end' : ' top');
+    if (hn) hn.textContent = !more ? '' : atTop ? '▼ scorri col telecomando' : atEnd ? '▲' : '▲ ▼'; }
   async _j(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
   async _lookup(a) {
     const t = clean(a.media_title), ar = (a.media_artist || '').trim(); if (!t) return;
@@ -351,8 +358,8 @@ class MediaTvCard extends HTMLElement {
       .panels{flex:1;min-height:0;display:grid;grid-template-columns:1.65fr 1fr;gap:1.6vw}
       .pn{background:rgba(10,14,18,.55);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);border-radius:1vw;padding:2.6vh 1.6vw;min-height:0;display:flex;flex-direction:column}
       .pn h2{margin:0 0 1.4vh;font-size:calc(1vw * var(--ts));letter-spacing:.22em;text-transform:uppercase;color:rgba(252,211,77,.9);font-weight:600}
-      .story{flex:1;min-height:0;overflow:hidden;font-size:calc(1.32vw * var(--ts));line-height:1.55;color:rgba(238,242,246,.9);-webkit-mask-image:linear-gradient(180deg,#000 82%,transparent);mask-image:linear-gradient(180deg,#000 82%,transparent)}
-      .story p{margin:0 0 1.2vh}
+      .story{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;scroll-behavior:smooth;font-size:calc(1.32vw * var(--ts));line-height:1.55;color:rgba(238,242,246,.9);-webkit-mask-image:linear-gradient(180deg,#000 82%,transparent);mask-image:linear-gradient(180deg,#000 82%,transparent)}
+      .story p{margin:0 0 1.2vh}.story::-webkit-scrollbar{display:none}.story.top{-webkit-mask-image:linear-gradient(180deg,transparent,#000 12%,#000 82%,transparent);mask-image:linear-gradient(180deg,transparent,#000 12%,#000 82%,transparent)}.story.end{-webkit-mask-image:linear-gradient(180deg,transparent,#000 12%);mask-image:linear-gradient(180deg,transparent,#000 12%)}.story.all{-webkit-mask-image:none;mask-image:none}.hint{float:right;letter-spacing:0;text-transform:none;color:rgba(238,242,246,.45);font-weight:400}
       .src{margin-top:1.2vh;font-size:calc(.85vw * var(--ts));color:rgba(238,242,246,.45)}
       .dl{display:grid;grid-template-columns:auto 1fr;gap:1.3vh 1.2vw;font-size:calc(1.25vw * var(--ts));align-content:start}
       .dl dt{color:rgba(238,242,246,.5)}.dl dd{margin:0;color:#eef2f6;font-weight:500}
@@ -368,12 +375,12 @@ class MediaTvCard extends HTMLElement {
         <div><h1>${esc(clean(a.media_title))}</h1><div class="art">${esc(a.media_artist || I.artistItunes || '')}</div><div class="alb">${esc([I.album || a.media_album_name, I.year].filter(Boolean).join(' · '))}</div></div>
         <div class="prog"><span id="el"></span><div class="track"><div id="bar"></div></div><span>${I.dur || a.media_duration ? mmss(a.media_duration || I.dur) : ''}</span></div>
         <div class="panels">
-          <div class="pn"><h2>${w ? kindLab[w.kind] : 'La storia del brano'}</h2><div class="story">${w ? w.text.split(/\n+/).filter((x) => x.trim()).slice(0, 8).map((p) => `<p>${esc(p)}</p>`).join('') : `<p class="wait">${I.done ? 'Nessuna informazione trovata su Wikipedia per questo brano.' : 'Cerco la storia del brano…'}</p>`}</div>${w ? `<div class="src">Fonte: Wikipedia${w.lang === 'en' ? ' (in inglese)' : ''} · «${esc(w.title)}» · CC BY-SA</div>` : ''}</div>
+          <div class="pn"><h2>${w ? kindLab[w.kind] : 'La storia del brano'}<span class="hint" id="hint"></span></h2><div class="story" id="story">${w ? w.text.split(/\n+/).filter((x) => x.trim()).map((p) => `<p>${esc(p)}</p>`).join('') : `<p class="wait">${I.done ? 'Nessuna informazione trovata su Wikipedia per questo brano.' : 'Cerco la storia del brano…'}</p>`}</div>${w ? `<div class="src">Fonte: Wikipedia${w.lang === 'en' ? ' (in inglese)' : ''} · «${esc(w.title)}» · CC BY-SA</div>` : ''}</div>
           <div class="pn"><h2>Dettagli</h2><dl class="dl">${det.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl><div class="vol"><i></i></div></div>
         </div>
       </div></div>` : `<div class="idle"><div class="c" id="clk"></div><div class="m">${esc(this._c.name || 'Musica')} · nessun brano in riproduzione</div></div>`}
     </div>`;
-    this._tick();
+    this._tick(); setTimeout(() => this._mask(), 50);
   }
 }
 if (!customElements.get('media-tv-card')) customElements.define('media-tv-card', MediaTvCard);
