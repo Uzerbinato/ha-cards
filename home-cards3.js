@@ -276,7 +276,7 @@ class MediaTvCard extends HTMLElement {
   setConfig(c) { this._c = c || {}; if (!this.shadowRoot) this.attachShadow({ mode: 'open' }); this._info = {}; }
   getCardSize() { return 12; }
   set hass(h) { this._h = h; const s = h.states[this._c.entity]; const a = s ? s.attributes : {};
-    const k = [s && s.state, a.media_title, a.media_artist].join('|'), k2 = [a.volume_level, a.source].join('|');
+    const k = [a.media_title, a.media_artist].join('|'), k2 = [s && s.state, a.volume_level, a.source].join('|');
     if (k === this._k && k2 !== this._k2) { this._k2 = k2; this._render(); }
     if (k !== this._k) { this._k = k; this._k2 = k2; this._t0 = Date.now(); this._render(); this._lookup(a); }
     else this._tick(); }
