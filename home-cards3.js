@@ -371,15 +371,15 @@ class MediaTvCard extends HTMLElement {
     const vol = Math.round((a.volume_level || 0) * 100);
     const w = I.wiki;
     const kindLab = { brano: 'La storia del brano', album: 'L’album', artista: 'L’artista' };
-    const det = [['Album', I.album || a.media_album_name], ['Anno', I.year], ['Genere', I.genre], ['Traccia', I.track ? I.track + (I.tracks ? ' di ' + I.tracks : '') : ''], ['Durata', I.dur ? mmss(I.dur) : ''], ['Sorgente', a.source], ['Volume', vol + '%']].filter(([, v]) => v);
+    const det = [['Album', I.album || a.media_album_name], ['Anno', I.year], ['Genere', I.genre], ['Traccia', I.track ? I.track + (I.tracks ? ' di ' + I.tracks : '') : ''], ['Durata', I.dur ? mmss(I.dur) : ''], ['Volume', vol + '%']].filter(([, v]) => v);
     this.shadowRoot.innerHTML = `<style>
       :host{display:block}
       .fs{--ts:${this._c.text_scale || 1};--acc:${I.acc || '#fcd34d'};--acc2:${I.acc2 || '#f59e0b'};position:fixed;inset:0;z-index:5;overflow:hidden;background:#07090b;color:#eef2f6;font-family:var(--primary-font-family,Roboto,sans-serif);zoom:${(1 / z).toFixed(4)}}
       .bg{position:absolute;inset:-60px;background:center/cover no-repeat;filter:blur(60px) brightness(.38) saturate(1.4);transform:scale(1.1);transition:background-image 1s}
       .vg{position:absolute;inset:0;background:radial-gradient(120% 100% at 30% 40%,transparent 0%,rgba(0,0,0,.55) 75%)}.tint{position:absolute;inset:0;background:radial-gradient(90% 80% at 75% 15%,var(--acc),transparent 60%);opacity:.10;transition:background 1.5s}
-      .side{display:flex;flex-direction:column;gap:1.6vw;min-height:0}.side .pn{flex:1}
+      .side{display:flex;flex-direction:column;gap:1.6vw;min-height:0}.side .pn{flex:1 1 0;min-height:0}.side .pn.det{flex:0 0 auto}
       .anm{font-size:calc(1.6vw * var(--ts));font-weight:700}.ads{font-size:calc(1.05vw * var(--ts));color:var(--acc);margin:.4vh 0 1.2vh;text-transform:lowercase}
-      .atx{font-size:calc(1.15vw * var(--ts));line-height:1.5;color:rgba(238,242,246,.82);overflow:hidden;flex:1;min-height:0}
+      .atx{font-size:calc(1.15vw * var(--ts));line-height:1.5;color:rgba(238,242,246,.82);overflow:hidden;flex:1;min-height:0;-webkit-mask-image:linear-gradient(180deg,#000 70%,transparent);mask-image:linear-gradient(180deg,#000 70%,transparent)}
       .wrap{position:absolute;inset:0;display:grid;grid-template-columns:40vw 1fr;gap:3.2vw;padding:4.5vh 4vw 5vh}
       .left{display:flex;flex-direction:column;justify-content:center;gap:2.4vh}
       .cov{width:100%;aspect-ratio:1;border-radius:1.2vw;background:#1b2128 center/cover no-repeat;box-shadow:0 3vh 7vh rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.06)}
@@ -415,7 +415,7 @@ class MediaTvCard extends HTMLElement {
         <div class="prog"><span id="el"></span><div class="track"><div id="bar"></div></div><span>${I.dur || a.media_duration ? mmss(a.media_duration || I.dur) : ''}</span></div>
         <div class="panels">
           <div class="pn"><h2>${w ? kindLab[w.kind] : 'La storia del brano'}<span class="hint" id="hint"></span></h2><div class="story" id="story">${w ? w.text.split(/\n+/).filter((x) => x.trim()).map((p) => `<p>${esc(p)}</p>`).join('') : `<p class="wait">${I.done ? 'Nessuna informazione trovata su Wikipedia per questo brano.' : 'Cerco la storia del brano…'}</p>`}</div>${w ? `<div class="src">Fonte: Wikipedia${w.lang === 'en' ? ' (in inglese)' : ''} · «${esc(w.title)}» · CC BY-SA</div>` : ''}</div>
-          <div class="side">${I.artistWiki ? `<div class="pn"><h2>L\u2019artista</h2><div class="anm">${esc(I.artistWiki.name)}</div>${I.artistWiki.desc ? `<div class="ads">${esc(I.artistWiki.desc)}</div>` : ''}<div class="atx">${esc(I.artistWiki.text)}</div></div>` : ''}<div class="pn"><h2>Dettagli</h2><dl class="dl">${det.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl><div class="vol"><i></i></div></div></div>
+          <div class="side">${I.artistWiki ? `<div class="pn"><h2>L\u2019artista</h2><div class="anm">${esc(I.artistWiki.name)}</div>${I.artistWiki.desc ? `<div class="ads">${esc(I.artistWiki.desc.length > 70 ? I.artistWiki.desc.slice(0, 68).replace(/[ ,]+[^ ,]*$/, '') + '…' : I.artistWiki.desc)}</div>` : ''}<div class="atx">${esc(I.artistWiki.text)}</div></div>` : ''}<div class="pn det"><h2>Dettagli</h2><dl class="dl">${det.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl><div class="vol"><i></i></div></div></div>
         </div>
       </div></div>` : `<div class="idle"><div class="c" id="clk"></div><div class="m">${esc(this._c.name || 'Musica')} · nessun brano in riproduzione</div></div>`}
     </div>`;
