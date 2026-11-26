@@ -266,6 +266,7 @@ class FinestraCard extends HTMLElement {
     const order = { alba: ['alba', 'giorno', 'tramonto', 'notte'], giorno: ['giorno', 'alba', 'tramonto', 'notte'], tramonto: ['tramonto', 'giorno', 'notte', 'alba'], notte: ['notte', 'tramonto', 'alba', 'giorno'] }[moment];
     const alias = { alba: ['alba', 'mattina'], giorno: ['giorno'], tramonto: ['tramonto', 'sera'], notte: ['notte', 'sera'] };
     for (const m of order) { for (const name of alias[m]) { const mf = moms.find((x) => x.title.toLowerCase() === name); if (!mf) continue; let v = (await this._ls(mf.media_content_id)).filter((x) => !x.can_expand);
+      if (this._c.webm_only !== false) { const w = v.filter((x) => /\.webm$/i.test(x.title)); if (this._c.webm_only || w.length) v = w; }
       if (this._c.only_hd) { const hd = v.filter((x) => /1280|_720|720p/.test(x.title)); if (hd.length) v = hd; }
       if (v.length) return { list: v, moment: m }; } }
     return { list: [], moment };
