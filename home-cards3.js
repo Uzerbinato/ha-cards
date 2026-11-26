@@ -276,8 +276,9 @@ class MediaTvCard extends HTMLElement {
   setConfig(c) { this._c = c || {}; if (!this.shadowRoot) this.attachShadow({ mode: 'open' }); this._info = {}; }
   getCardSize() { return 12; }
   set hass(h) { this._h = h; const s = h.states[this._c.entity]; const a = s ? s.attributes : {};
-    const k = [s && s.state, a.media_title, a.media_artist].join('|');
-    if (k !== this._k) { this._k = k; this._render(); this._lookup(a); }
+    const k = [s && s.state, a.media_title, a.media_artist].join('|'), k2 = [a.volume_level, a.source].join('|');
+    if (k === this._k && k2 !== this._k2) { this._k2 = k2; this._render(); }
+    if (k !== this._k) { this._k = k; this._k2 = k2; this._t0 = Date.now(); this._render(); this._lookup(a); }
     else this._tick(); }
   connectedCallback() { clearInterval(this._iv); this._iv = setInterval(() => this._tick(), 1000); }
   disconnectedCallback() { clearInterval(this._iv); }
@@ -296,7 +297,7 @@ class MediaTvCard extends HTMLElement {
       const s = await this._j(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srlimit=6&format=json&origin=*&srsearch=` + encodeURIComponent(q));
       const hit = (s.query && s.query.search || []).find((x) => must(norm(x.title))); if (!hit) return null;
       const e = await this._j(`https://${lang}.wikipedia.org/w/api.php?action=query&prop=extracts|pageimages&exintro=1&explaintext=1&redirects=1&format=json&origin=*&titles=` + encodeURIComponent(hit.title));
-      const p = Object.values(e.query.pages)[0]; if (!p || !p.extract || p.extract.length < 120) return null;
+      const p = Object.values(e.query.pages)[0]; if (!p || !p.extract || p.extract.length < (lang === 'it' ? 60 : 120)) return null;
       return { title: p.title, text: p.extract, url: `https://${lang}.wikipedia.org/wiki/` + encodeURIComponent(p.title.replace(/ /g, '_')), lang };
     };
     const nt = norm(t), na = norm(ar), nal = norm(clean(info.album || a.media_album_name || ''));
@@ -308,10 +309,12 @@ class MediaTvCard extends HTMLElement {
     if (this._info === info) { info.done = true; this._render(); }
   }
   _pos() { const s = this._h && this._h.states[this._c.entity]; if (!s) return [0, 0]; const a = s.attributes;
-    const dur = a.media_duration || this._info.dur || 0; let p = a.media_position || 0;
-    if (s.state === 'playing' && a.media_position_updated_at) p += (Date.now() - Date.parse(a.media_position_updated_at)) / 1000;
+    const dur = a.media_duration || this._info.dur || 0; const upd = a.media_position_updated_at ? Date.parse(a.media_position_updated_at) : 0; let p;
+    if (upd && upd >= (this._t0 || 0) - 5000) { p = (a.media_position || 0) + (s.state === 'playing' ? (Date.now() - upd) / 1000 : 0); }
+    else { if (s.state !== 'playing') { this._pz = this._pz || Date.now(); } else if (this._pz) { this._t0 += Date.now() - this._pz; this._pz = 0; }
+      p = ((this._pz || Date.now()) - (this._t0 || Date.now())) / 1000; }
     return [dur ? Math.min(p, dur) : p, dur]; }
-  _tick() { const R = this.shadowRoot; if (!R) return; const b = R.getElementById('bar'), e = R.getElementById('el'), cl = R.getElementById('clk');
+  _tick() { const R = this.shadowRoot; if (!R) return; const fs = R.querySelector('.fs'); if (fs) { const z = parseFloat(getComputedStyle(document.documentElement).zoom) || 1; fs.style.zoom = (1 / z).toFixed(4); } const b = R.getElementById('bar'), e = R.getElementById('el'), cl = R.getElementById('clk');
     if (cl) cl.textContent = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
     if (!b) return; const [p, d] = this._pos(); b.style.width = d ? (100 * p / d).toFixed(2) + '%' : '0%'; if (e) e.textContent = d ? mmss(p) : ''; }
   _render() {
