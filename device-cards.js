@@ -286,7 +286,7 @@ class FinestraCard extends HTMLElement {
   _build() {
     this.shadowRoot.innerHTML = `<style>
       .fs{position:fixed;inset:0;z-index:2147483000;background:#000;overflow:hidden;color:#e6edf3;font-family:var(--primary-font-family,sans-serif)}
-      video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;background:#000}
+      video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;background:#000;opacity:.999;filter:brightness(1.001);transform:translateZ(0)}
       .blk{position:absolute;inset:0;background:#000;z-index:2;opacity:0;transition:opacity 1.5s ease;pointer-events:none}
       .msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(120% 90% at 50% 30%,#1b2a33 0%,#0b1114 70%);transition:opacity 2s}
       .msg h1{font-size:4.2vw;font-weight:300;margin:0 0 1.2vw}.msg p{font-size:1.6vw;color:#9fb3bd;max-width:60vw;margin:0}
