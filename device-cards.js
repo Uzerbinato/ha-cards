@@ -266,14 +266,13 @@ class FinestraCard extends HTMLElement {
     const order = { alba: ['alba', 'giorno', 'tramonto', 'notte'], giorno: ['giorno', 'alba', 'tramonto', 'notte'], tramonto: ['tramonto', 'giorno', 'notte', 'alba'], notte: ['notte', 'tramonto', 'alba', 'giorno'] }[moment];
     const alias = { alba: ['alba', 'mattina'], giorno: ['giorno'], tramonto: ['tramonto', 'sera'], notte: ['notte', 'sera'] };
     for (const m of order) { for (const name of alias[m]) { const mf = moms.find((x) => x.title.toLowerCase() === name); if (!mf) continue; let v = (await this._ls(mf.media_content_id)).filter((x) => !x.can_expand);
-      if (this._c.webm_only !== false) { const w = v.filter((x) => /\.webm$/i.test(x.title)); if (this._c.webm_only || w.length) v = w; }
-      if (this._c.only_hd) { const hd = v.filter((x) => /1280|_720|720p/.test(x.title)); if (hd.length) v = hd; }
+      for (const ext of (this._c.prefer || ['avif', 'webp', 'webm', 'mp4'])) { const w = v.filter((x) => x.title.toLowerCase().endsWith('.' + ext)); if (w.length) { v = w; break; } }
       if (v.length) return { list: v, moment: m }; } }
     return { list: [], moment };
   }
   async _pick() {
     const c = this._c, d = new Date();
-    if (c.video) { this._show(c.video, ''); return; }
+    if (c.video) { this._img = /\.(avif|webp|gif)(\?|$)/i.test(c.video); this._show(c.video, ''); return; }
     const season = this._season(d), moment = this._moment(d);
     const slot = season + '/' + moment, due = !this._since || Date.now() - this._since > c.change_minutes * 6e4;
     if (slot === this._slot && !due) return;
@@ -281,35 +280,38 @@ class FinestraCard extends HTMLElement {
     if (!list.length) { this._wait(season, moment); this._slot = slot; return; }
     const pick = list.length > 1 ? list.filter((x) => x.media_content_id !== this._cur)[Math.floor(Math.random() * (list.length - 1))] : list[0];
     if (pick.media_content_id === this._cur && slot === this._slot) { this._since = Date.now(); return; }
-    try { const r = await this._h.callWS({ type: 'media_source/resolve_media', media_content_id: pick.media_content_id }); this._cur = pick.media_content_id; this._slot = slot; this._since = Date.now(); this._show(r.url, (/^\d/.test(pick.title) ? '' : pick.title.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '))); } catch (e) {}
+    try { const r = await this._h.callWS({ type: 'media_source/resolve_media', media_content_id: pick.media_content_id }); this._cur = pick.media_content_id; this._slot = slot; this._since = Date.now(); this._img = /\.(avif|webp|gif)$/i.test(pick.title); this._show(r.url, (/^\d/.test(pick.title) ? '' : pick.title.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '))); } catch (e) {}
   }
   _build() {
     this.shadowRoot.innerHTML = `<style>
       .fs{position:fixed;inset:0;z-index:2147483000;background:#000;overflow:hidden;color:#e6edf3;font-family:var(--primary-font-family,sans-serif)}
-      video{position:absolute;left:0;top:0;width:4px;height:4px;opacity:.01;z-index:0}
-      canvas{position:absolute;inset:0;width:100%;height:100%;z-index:1;background:#000}
+      video,img.l{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;opacity:0;transition:opacity 3s ease}
+      video.on,img.l.on{opacity:1}
       .blk{position:absolute;inset:0;background:#000;z-index:2;opacity:0;transition:opacity 1.5s ease;pointer-events:none}
       .msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(120% 90% at 50% 30%,#1b2a33 0%,#0b1114 70%);transition:opacity 2s}
       .msg h1{font-size:4.2vw;font-weight:300;margin:0 0 1.2vw}.msg p{font-size:1.6vw;color:#9fb3bd;max-width:60vw;margin:0}
       .t{position:absolute;bottom:3vw;right:4vw;font-size:3vw;font-weight:200;color:#f1f5f9;text-shadow:0 2px 14px rgba(0,0,0,.7);z-index:3}
       .cap{position:absolute;bottom:3.4vw;left:4vw;font-size:1.1vw;letter-spacing:.2em;text-transform:uppercase;color:rgba(241,245,249,.75);text-shadow:0 2px 10px rgba(0,0,0,.7);z-index:3;transition:opacity 3s}
-    </style><div class="fs"><video id="a" muted loop playsinline autoplay preload="auto"></video><canvas id="cv"></canvas>
+    </style><div class="fs"><img class="l" id="ia" alt=""><img class="l" id="ib" alt=""><video id="a" muted loop playsinline autoplay preload="auto"></video>
       <div class="blk" id="k"></div><div class="msg" id="m" style="z-index:2"><h1>${this._c.title || 'Sala riunioni'}</h1><p id="mt">${this._c.text || ''}</p></div><div class="cap" id="cap"></div><div class="t" id="t"></div></div>`;
     const t = this.shadowRoot.getElementById('t'); const tick = () => { t.textContent = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); };
     tick(); clearInterval(this._iv); this._iv = setInterval(tick, 10000);
-    const cv = this.shadowRoot.getElementById('cv'), vv = this.shadowRoot.getElementById('a'), cx = cv.getContext('2d');
-    const draw = () => { if (!this.isConnected) return; requestAnimationFrame(draw);
-      if (vv.readyState < 2 || !vv.videoWidth) return; const W = cv.clientWidth, H = cv.clientHeight; if (cv.width !== W) cv.width = W; if (cv.height !== H) cv.height = H;
-      const s = Math.max(W / vv.videoWidth, H / vv.videoHeight), w = vv.videoWidth * s, h = vv.videoHeight * s; cx.drawImage(vv, (W - w) / 2, (H - h) / 2, w, h); };
-    requestAnimationFrame(draw);
     if (this._c.debug) { const d = document.createElement('div'); d.style.cssText = 'position:absolute;top:2vw;left:2vw;z-index:9;font:bold 1.6vw monospace;color:#ff0;background:rgba(0,0,0,.7);padding:.6vw 1vw;white-space:pre'; this.shadowRoot.querySelector('.fs').appendChild(d);
-      clearInterval(this._dbg); this._dbg = setInterval(() => { const v = this.shadowRoot.getElementById('a'); d.textContent = 'rs=' + v.readyState + ' ns=' + v.networkState + ' err=' + (v.error ? v.error.code + ' ' + (v.error.message || '') : '-') + ' t=' + v.currentTime.toFixed(1) + ' paused=' + v.paused + '\nsrc=' + (v.currentSrc || '').slice(-60) + '\nslot=' + this._slot + ' ua=' + navigator.userAgent.slice(-50); }, 1000); }
+      clearInterval(this._dbg); this._dbg = setInterval(() => { const v = this.shadowRoot.getElementById('a'), ii = this.shadowRoot.querySelector('img.l.on'); d.textContent = (ii ? 'IMG ' + ii.naturalWidth + 'px ' + (ii.complete ? 'ok' : '…') + '  ' : '') + 'rs=' + v.readyState + ' ns=' + v.networkState + ' err=' + (v.error ? v.error.code + ' ' + (v.error.message || '') : '-') + ' t=' + v.currentTime.toFixed(1) + ' paused=' + v.paused + '\nsrc=' + (v.currentSrc || '').slice(-60) + '\nslot=' + this._slot + ' ua=' + navigator.userAgent.slice(-50); }, 1000); }
   }
   _wait(season, moment) { const m = this.shadowRoot.getElementById('m'); m.style.opacity = 1; this.shadowRoot.getElementById('mt').textContent = `Nessun video per ${season} · ${moment}: aggiungilo nella cartella ${this._c.folder}/${season}/${moment} del NAS.`; }
   _show(url, cap) {
-    const R = this.shadowRoot, v = R.getElementById('a'), k = R.getElementById('k');
-    const swap = () => { v.muted = true; v.defaultMuted = true; v.src = url; const done = () => { R.getElementById('m').style.display = 'none'; R.getElementById('cap').textContent = cap; k.style.opacity = 0; }; v.onplaying = () => { v.onplaying = null; done(); }; v.play().catch(() => {}); setTimeout(() => { if (v.paused) v.play().catch(() => {}); }, 3000); };
-    if (v.getAttribute('src')) { k.style.opacity = 1; setTimeout(swap, 1600); } else swap();
+    const R = this.shadowRoot, v = R.getElementById('a'), ia = R.getElementById('ia'), ib = R.getElementById('ib');
+    const done = () => { R.getElementById('m').style.display = 'none'; const cp = R.getElementById('cap'); cp.style.opacity = 0; setTimeout(() => { cp.textContent = cap; cp.style.opacity = 1; }, 1500); };
+    if (/\.(avif|webp|gif|png|jpe?g)(\?|$)/i.test(url.split('#')[0]) || /\.(avif|webp)$/i.test(cap || '') || this._img) {
+      // immagine animata: decodificata dal browser, funziona anche dove il lettore video della TV non mostra i fotogrammi
+      const front = ia.classList.contains('on') ? ia : ib.classList.contains('on') ? ib : null, back = front === ia ? ib : ia;
+      const pre = new Image(); pre.onload = () => { back.src = url; back.classList.add('on'); if (front) { front.classList.remove('on'); setTimeout(() => { front.removeAttribute('src'); }, 3500); }
+        if (v.classList.contains('on')) { v.classList.remove('on'); setTimeout(() => { v.pause(); v.removeAttribute('src'); v.load(); }, 3500); } done(); };
+      pre.src = url; return;
+    }
+    v.muted = true; v.defaultMuted = true; v.src = url; v.onplaying = () => { v.onplaying = null; v.classList.add('on'); [ia, ib].forEach((i) => { i.classList.remove('on'); }); done(); };
+    v.play().catch(() => {}); setTimeout(() => { if (v.paused) v.play().catch(() => {}); }, 3000);
   }
 }
 customElements.define('finestra-card', FinestraCard);
