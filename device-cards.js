@@ -286,16 +286,22 @@ class FinestraCard extends HTMLElement {
   _build() {
     this.shadowRoot.innerHTML = `<style>
       .fs{position:fixed;inset:0;z-index:2147483000;background:#000;overflow:hidden;color:#e6edf3;font-family:var(--primary-font-family,sans-serif)}
-      video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;background:#000;opacity:.999;filter:brightness(1.001);transform:translateZ(0)}
+      video{position:absolute;left:0;top:0;width:4px;height:4px;opacity:.01;z-index:0}
+      canvas{position:absolute;inset:0;width:100%;height:100%;z-index:1;background:#000}
       .blk{position:absolute;inset:0;background:#000;z-index:2;opacity:0;transition:opacity 1.5s ease;pointer-events:none}
       .msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(120% 90% at 50% 30%,#1b2a33 0%,#0b1114 70%);transition:opacity 2s}
       .msg h1{font-size:4.2vw;font-weight:300;margin:0 0 1.2vw}.msg p{font-size:1.6vw;color:#9fb3bd;max-width:60vw;margin:0}
       .t{position:absolute;bottom:3vw;right:4vw;font-size:3vw;font-weight:200;color:#f1f5f9;text-shadow:0 2px 14px rgba(0,0,0,.7);z-index:3}
       .cap{position:absolute;bottom:3.4vw;left:4vw;font-size:1.1vw;letter-spacing:.2em;text-transform:uppercase;color:rgba(241,245,249,.75);text-shadow:0 2px 10px rgba(0,0,0,.7);z-index:3;transition:opacity 3s}
-    </style><div class="fs"><video id="a" muted loop playsinline autoplay preload="auto" poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="></video>
+    </style><div class="fs"><video id="a" muted loop playsinline autoplay preload="auto"></video><canvas id="cv"></canvas>
       <div class="blk" id="k"></div><div class="msg" id="m" style="z-index:2"><h1>${this._c.title || 'Sala riunioni'}</h1><p id="mt">${this._c.text || ''}</p></div><div class="cap" id="cap"></div><div class="t" id="t"></div></div>`;
     const t = this.shadowRoot.getElementById('t'); const tick = () => { t.textContent = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); };
     tick(); clearInterval(this._iv); this._iv = setInterval(tick, 10000);
+    const cv = this.shadowRoot.getElementById('cv'), vv = this.shadowRoot.getElementById('a'), cx = cv.getContext('2d');
+    const draw = () => { if (!this.isConnected) return; requestAnimationFrame(draw);
+      if (vv.readyState < 2 || !vv.videoWidth) return; const W = cv.clientWidth, H = cv.clientHeight; if (cv.width !== W) cv.width = W; if (cv.height !== H) cv.height = H;
+      const s = Math.max(W / vv.videoWidth, H / vv.videoHeight), w = vv.videoWidth * s, h = vv.videoHeight * s; cx.drawImage(vv, (W - w) / 2, (H - h) / 2, w, h); };
+    requestAnimationFrame(draw);
     if (this._c.debug) { const d = document.createElement('div'); d.style.cssText = 'position:absolute;top:2vw;left:2vw;z-index:9;font:bold 1.6vw monospace;color:#ff0;background:rgba(0,0,0,.7);padding:.6vw 1vw;white-space:pre'; this.shadowRoot.querySelector('.fs').appendChild(d);
       clearInterval(this._dbg); this._dbg = setInterval(() => { const v = this.shadowRoot.getElementById('a'); d.textContent = 'rs=' + v.readyState + ' ns=' + v.networkState + ' err=' + (v.error ? v.error.code + ' ' + (v.error.message || '') : '-') + ' t=' + v.currentTime.toFixed(1) + ' paused=' + v.paused + '\nsrc=' + (v.currentSrc || '').slice(-60) + '\nslot=' + this._slot + ' ua=' + navigator.userAgent.slice(-50); }, 1000); }
   }
