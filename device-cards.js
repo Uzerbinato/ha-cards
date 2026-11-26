@@ -243,7 +243,7 @@ customElements.define('meter-card', MeterCard);
 //   config: title, text, videos: [{src, season, from, to}] (in arrivo)
 class FinestraCard extends HTMLElement {
   // config: folder (default 'Finestra'), video (URL fisso, facoltativo), title, text, change_minutes (default 20)
-  setConfig(c) { this._c = Object.assign({ folder: 'Finestra', change_minutes: 20 }, c || {}); if (!this.shadowRoot) this.attachShadow({ mode: 'open' }); this._built = false; }
+  setConfig(c) { const j = JSON.stringify(c || {}); if (j === this._cj) return; this._cj = j; this._c = Object.assign({ folder: 'Finestra', change_minutes: 20 }, c || {}); if (!this._sr) this._sr = this.attachShadow({ mode: 'open' }); this._built = false; if (this._h) { this._build(); this._built = true; this._pick(); } }
   set hass(h) { this._h = h; if (!this._built) { this._build(); this._built = true; this._pick(); clearInterval(this._iv2); this._iv2 = setInterval(() => this._pick(), 60000); } }
   getCardSize() { return 8; }
   _season(d) { const m = d.getMonth() + 1, g = d.getDate(), k = m * 100 + g; return k >= 321 && k < 621 ? 'primavera' : k >= 621 && k < 923 ? 'estate' : k >= 923 && k < 1221 ? 'autunno' : 'inverno'; }
@@ -275,14 +275,15 @@ class FinestraCard extends HTMLElement {
     if (c.video) { this._img = /\.(avif|webp|gif)(\?|$)/i.test(c.video); this._show(c.video, ''); return; }
     const season = this._season(d), moment = this._moment(d);
     const slot = season + '/' + moment, due = !this._since || Date.now() - this._since > c.change_minutes * 6e4;
-    if (slot === this._slot && !due) return;
+    if (slot === this._slot && !due && this._shown) return;
     const { list } = await this._videos(season, moment);
     if (!list.length) { this._wait(season, moment); this._slot = slot; return; }
     const pick = list.length > 1 ? list.filter((x) => x.media_content_id !== this._cur)[Math.floor(Math.random() * (list.length - 1))] : list[0];
-    if (pick.media_content_id === this._cur && slot === this._slot) { this._since = Date.now(); return; }
+    if (pick.media_content_id === this._cur && slot === this._slot && this._shown) { this._since = Date.now(); return; }
     try { const r = await this._h.callWS({ type: 'media_source/resolve_media', media_content_id: pick.media_content_id }); this._cur = pick.media_content_id; this._slot = slot; this._since = Date.now(); this._img = /\.(avif|webp|gif)$/i.test(pick.title); this._show(r.url, (/^\d/.test(pick.title) ? '' : pick.title.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '))); } catch (e) {}
   }
   _build() {
+    this._shown = false; this._cur = null;
     this.shadowRoot.innerHTML = `<style>
       .fs{position:fixed;inset:0;z-index:2147483000;background:#000;overflow:hidden;color:#e6edf3;font-family:var(--primary-font-family,sans-serif)}
       video,img.l{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;opacity:0;transition:opacity 3s ease}
@@ -302,7 +303,7 @@ class FinestraCard extends HTMLElement {
   _wait(season, moment) { const m = this.shadowRoot.getElementById('m'); m.style.opacity = 1; this.shadowRoot.getElementById('mt').textContent = `Nessun video per ${season} · ${moment}: aggiungilo nella cartella ${this._c.folder}/${season}/${moment} del NAS.`; }
   _show(url, cap) {
     const R = this.shadowRoot, v = R.getElementById('a'), ia = R.getElementById('ia'), ib = R.getElementById('ib');
-    const done = () => { R.getElementById('m').style.display = 'none'; const cp = R.getElementById('cap'); cp.style.opacity = 0; setTimeout(() => { cp.textContent = cap; cp.style.opacity = 1; }, 1500); };
+    const done = () => { this._shown = true; R.getElementById('m').style.display = 'none'; const cp = R.getElementById('cap'); cp.style.opacity = 0; setTimeout(() => { cp.textContent = cap; cp.style.opacity = 1; }, 1500); };
     if (/\.(avif|webp|gif|png|jpe?g)(\?|$)/i.test(url.split('#')[0]) || /\.(avif|webp)$/i.test(cap || '') || this._img) {
       // immagine animata: decodificata dal browser, funziona anche dove il lettore video della TV non mostra i fotogrammi
       const front = ia.classList.contains('on') ? ia : ib.classList.contains('on') ? ib : null, back = front === ia ? ib : ia;
