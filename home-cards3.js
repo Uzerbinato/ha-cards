@@ -300,6 +300,8 @@ class MediaTvCard extends HTMLElement {
       if (r) Object.assign(info, { art: r.artworkUrl100.replace('100x100bb', '1200x1200bb'), album: r.collectionName, year: (r.releaseDate || '').slice(0, 4), genre: r.primaryGenreName, dur: r.trackTimeMillis / 1000, track: r.trackNumber, tracks: r.trackCount, artistItunes: r.artistName });
     } catch (e) {}
     if (this._info !== info) return; this._render();
+    if (info.art) this._color(info.art, info);
+    this._artist(ar, info);
     // Wikipedia: prima il brano, poi l'album, poi l'artista
     const tryWiki = async (lang, q, must) => {
       const s = await this._j(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srlimit=6&format=json&origin=*&srsearch=` + encodeURIComponent(q));
@@ -318,6 +320,33 @@ class MediaTvCard extends HTMLElement {
       ['artista', 'it', ar, (x) => x.startsWith(na)], ['artista', 'en', ar + ' musician', (x) => x.startsWith(na)]];
     for (const [kind, lang, q, must] of steps) { if (!q.trim()) continue; try { const w = await tryWiki(lang, q, must); if (w) { info.wiki = Object.assign(w, { kind }); break; } } catch (e) {} }
     if (this._info === info) { info.done = true; this._render(); }
+  }
+  async _artist(ar, info) {
+    if (!ar) return; const na = norm(ar);
+    for (const [lang, q] of [['it', ar], ['en', ar + ' band singer musician']]) {
+      try {
+        const s = await this._j(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srlimit=6&format=json&origin=*&srsearch=` + encodeURIComponent(q));
+        const hit = (s.query && s.query.search || []).find((x) => norm(x.title).startsWith(na)); if (!hit) continue;
+        const e = await this._j(`https://${lang}.wikipedia.org/w/api.php?action=query&prop=description|extracts&exintro=1&explaintext=1&exsentences=3&redirects=1&format=json&origin=*&titles=` + encodeURIComponent(hit.title));
+        const p = Object.values(e.query.pages)[0]; if (!p || !p.extract || p.extract.length < 60) continue;
+        if (this._info !== info) return; info.artistWiki = { name: p.title.replace(/\s*\(.*\)$/, ''), desc: p.description || '', text: p.extract.replace(/\s*\([^)]*\)/g, '').replace(/\s+/g, ' ').trim(), lang }; this._render(); return;
+      } catch (e) {}
+    }
+  }
+  _color(url, info) {
+    const img = new Image(); img.crossOrigin = 'anonymous';
+    img.onload = () => { try {
+      const c = document.createElement('canvas'); c.width = c.height = 36; const x = c.getContext('2d'); x.drawImage(img, 0, 0, 36, 36);
+      const d = x.getImageData(0, 0, 36, 36).data, B = Array.from({ length: 12 }, () => ({ w: 0, s: 0 }));
+      for (let i = 0; i < d.length; i += 4) { const r = d[i] / 255, g = d[i + 1] / 255, bl = d[i + 2] / 255, mx = Math.max(r, g, bl), mn = Math.min(r, g, bl), l = (mx + mn) / 2, dd = mx - mn;
+        if (dd < 0.12 || l < 0.12 || l > 0.92) continue; const sat = dd / (1 - Math.abs(2 * l - 1));
+        let hh = mx === r ? ((g - bl) / dd) % 6 : mx === g ? (bl - r) / dd + 2 : (r - g) / dd + 4; hh = (hh * 60 + 360) % 360;
+        const k = Math.floor(hh / 30), w = sat * dd; B[k].w += w; B[k].s += w * hh; }
+      const best = B.reduce((m, v, k) => (v.w > B[m].w ? k : m), 0);
+      if (B[best].w < 2) return; const hue = Math.round(B[best].s / B[best].w);
+      if (this._info !== info) return; info.acc = `hsl(${hue} 78% 64%)`; info.acc2 = `hsl(${hue} 70% 46%)`; this._render();
+    } catch (e) {} };
+    img.src = url;
   }
   _pos() { const s = this._h && this._h.states[this._c.entity]; if (!s) return [0, 0]; const a = s.attributes;
     const dur = a.media_duration || this._info.dur || 0; const upd = a.media_position_updated_at ? Date.parse(a.media_position_updated_at) : 0; let p;
@@ -339,9 +368,12 @@ class MediaTvCard extends HTMLElement {
     const det = [['Album', I.album || a.media_album_name], ['Anno', I.year], ['Genere', I.genre], ['Traccia', I.track ? I.track + (I.tracks ? ' di ' + I.tracks : '') : ''], ['Durata', I.dur ? mmss(I.dur) : ''], ['Sorgente', a.source], ['Volume', vol + '%']].filter(([, v]) => v);
     this.shadowRoot.innerHTML = `<style>
       :host{display:block}
-      .fs{--ts:${this._c.text_scale || 1};position:fixed;inset:0;z-index:5;overflow:hidden;background:#07090b;color:#eef2f6;font-family:var(--primary-font-family,Roboto,sans-serif);zoom:${(1 / z).toFixed(4)}}
+      .fs{--ts:${this._c.text_scale || 1};--acc:${I.acc || '#fcd34d'};--acc2:${I.acc2 || '#f59e0b'};position:fixed;inset:0;z-index:5;overflow:hidden;background:#07090b;color:#eef2f6;font-family:var(--primary-font-family,Roboto,sans-serif);zoom:${(1 / z).toFixed(4)}}
       .bg{position:absolute;inset:-60px;background:center/cover no-repeat;filter:blur(60px) brightness(.38) saturate(1.4);transform:scale(1.1);transition:background-image 1s}
-      .vg{position:absolute;inset:0;background:radial-gradient(120% 100% at 30% 40%,transparent 0%,rgba(0,0,0,.55) 75%)}
+      .vg{position:absolute;inset:0;background:radial-gradient(120% 100% at 30% 40%,transparent 0%,rgba(0,0,0,.55) 75%)}.tint{position:absolute;inset:0;background:radial-gradient(90% 80% at 75% 15%,var(--acc),transparent 60%);opacity:.10;transition:background 1.5s}
+      .side{display:flex;flex-direction:column;gap:1.6vw;min-height:0}.side .pn{flex:1}
+      .anm{font-size:calc(1.6vw * var(--ts));font-weight:700}.ads{font-size:calc(1.05vw * var(--ts));color:var(--acc);margin:.4vh 0 1.2vh;text-transform:lowercase}
+      .atx{font-size:calc(1.15vw * var(--ts));line-height:1.5;color:rgba(238,242,246,.82);overflow:hidden;flex:1;min-height:0}
       .wrap{position:absolute;inset:0;display:grid;grid-template-columns:40vw 1fr;gap:3.2vw;padding:4.5vh 4vw 5vh}
       .left{display:flex;flex-direction:column;justify-content:center;gap:2.4vh}
       .cov{width:100%;aspect-ratio:1;border-radius:1.2vw;background:#1b2128 center/cover no-repeat;box-shadow:0 3vh 7vh rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.06)}
@@ -351,24 +383,24 @@ class MediaTvCard extends HTMLElement {
       .top .dot{width:.7vw;height:.7vw;border-radius:50%;background:${play ? '#4ade80' : '#fbbf24'};box-shadow:0 0 1vw ${play ? '#4ade80' : '#fbbf24'}}
       .top .clk{margin-left:auto;letter-spacing:0;font-size:calc(2.2vw * var(--ts));font-weight:200;text-transform:none;color:#f1f5f9}
       h1{margin:.6vh 0 0;font-size:calc(4.1vw * var(--ts));line-height:1.05;font-weight:700;letter-spacing:-.01em}
-      .art{font-size:calc(2.1vw * var(--ts));color:#fcd34d;font-weight:500}
+      .art{font-size:calc(2.1vw * var(--ts));color:var(--acc);transition:color 1.2s;font-weight:500}
       .alb{font-size:calc(1.35vw * var(--ts));color:rgba(238,242,246,.7);margin-top:.4vh}
       .prog{display:flex;align-items:center;gap:1vw;font-size:calc(1.1vw * var(--ts));color:rgba(238,242,246,.65);font-variant-numeric:tabular-nums}
       .track{flex:1;height:.55vh;border-radius:1vh;background:rgba(255,255,255,.14);overflow:hidden}
-      #bar{height:100%;background:linear-gradient(90deg,#fbbf24,#f59e0b);border-radius:1vh;transition:width 1s linear}
+      #bar{height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:1vh;transition:width 1s linear}
       .panels{flex:1;min-height:0;display:grid;grid-template-columns:1.65fr 1fr;gap:1.6vw}
       .pn{background:rgba(10,14,18,.55);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);border-radius:1vw;padding:2.6vh 1.6vw;min-height:0;display:flex;flex-direction:column}
-      .pn h2{margin:0 0 1.4vh;font-size:calc(1vw * var(--ts));letter-spacing:.22em;text-transform:uppercase;color:rgba(252,211,77,.9);font-weight:600}
+      .pn h2{margin:0 0 1.4vh;font-size:calc(1vw * var(--ts));letter-spacing:.22em;text-transform:uppercase;color:var(--acc);font-weight:600;transition:color 1.2s}
       .story{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;font-size:calc(1.32vw * var(--ts));line-height:1.55;color:rgba(238,242,246,.9);-webkit-mask-image:linear-gradient(180deg,#000 82%,transparent);mask-image:linear-gradient(180deg,#000 82%,transparent)}
       .story p{margin:0 0 1.2vh}.story::-webkit-scrollbar{display:none}.story.top{-webkit-mask-image:linear-gradient(180deg,transparent,#000 12%,#000 82%,transparent);mask-image:linear-gradient(180deg,transparent,#000 12%,#000 82%,transparent)}.story.end{-webkit-mask-image:linear-gradient(180deg,transparent,#000 12%);mask-image:linear-gradient(180deg,transparent,#000 12%)}.story.all{-webkit-mask-image:none;mask-image:none}.hint{float:right;letter-spacing:0;text-transform:none;color:rgba(238,242,246,.45);font-weight:400}
       .src{margin-top:1.2vh;font-size:calc(.85vw * var(--ts));color:rgba(238,242,246,.45)}
       .dl{display:grid;grid-template-columns:auto 1fr;gap:1.3vh 1.2vw;font-size:calc(1.25vw * var(--ts));align-content:start}
       .dl dt{color:rgba(238,242,246,.5)}.dl dd{margin:0;color:#eef2f6;font-weight:500}
-      .vol{height:.5vh;border-radius:1vh;background:rgba(255,255,255,.14);margin-top:.9vh;overflow:hidden}.vol i{display:block;height:100%;width:${vol}%;background:#94a3b8}
+      .vol{height:.5vh;border-radius:1vh;background:rgba(255,255,255,.14);margin-top:.9vh;overflow:hidden}.vol i{display:block;height:100%;width:${vol}%;background:var(--acc2)}
       .idle{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vh;color:rgba(238,242,246,.7)}
       .idle .c{font-size:calc(7vw * var(--ts));font-weight:200;color:#f1f5f9}.idle .m{font-size:calc(1.6vw * var(--ts))}
       .wait{color:rgba(238,242,246,.45);font-style:italic}
-    </style><div class="fs"><div class="bg" style="${art ? `background-image:url('${art}')` : ''}"></div><div class="vg"></div>
+    </style><div class="fs"><div class="bg" style="${art ? `background-image:url('${art}')` : ''}"></div><div class="vg"></div><div class="tint"></div>
     ${on ? `<div class="wrap">
       <div class="left">${art ? `<div class="cov" style="background-image:url('${art}')"></div>` : `<div class="cov none"><ha-icon icon="mdi:music" style="--mdc-icon-size:10vw;color:rgba(26,18,6,.8)"></ha-icon></div>`}</div>
       <div class="right">
@@ -377,7 +409,7 @@ class MediaTvCard extends HTMLElement {
         <div class="prog"><span id="el"></span><div class="track"><div id="bar"></div></div><span>${I.dur || a.media_duration ? mmss(a.media_duration || I.dur) : ''}</span></div>
         <div class="panels">
           <div class="pn"><h2>${w ? kindLab[w.kind] : 'La storia del brano'}<span class="hint" id="hint"></span></h2><div class="story" id="story">${w ? w.text.split(/\n+/).filter((x) => x.trim()).map((p) => `<p>${esc(p)}</p>`).join('') : `<p class="wait">${I.done ? 'Nessuna informazione trovata su Wikipedia per questo brano.' : 'Cerco la storia del brano…'}</p>`}</div>${w ? `<div class="src">Fonte: Wikipedia${w.lang === 'en' ? ' (in inglese)' : ''} · «${esc(w.title)}» · CC BY-SA</div>` : ''}</div>
-          <div class="pn"><h2>Dettagli</h2><dl class="dl">${det.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl><div class="vol"><i></i></div></div>
+          <div class="side">${I.artistWiki ? `<div class="pn"><h2>L\u2019artista</h2><div class="anm">${esc(I.artistWiki.name)}</div>${I.artistWiki.desc ? `<div class="ads">${esc(I.artistWiki.desc)}</div>` : ''}<div class="atx">${esc(I.artistWiki.text)}</div></div>` : ''}<div class="pn"><h2>Dettagli</h2><dl class="dl">${det.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl><div class="vol"><i></i></div></div></div>
         </div>
       </div></div>` : `<div class="idle"><div class="c" id="clk"></div><div class="m">${esc(this._c.name || 'Musica')} · nessun brano in riproduzione</div></div>`}
     </div>`;

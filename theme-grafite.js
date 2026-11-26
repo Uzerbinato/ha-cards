@@ -155,7 +155,7 @@
     }, 380);
   };
   let idle;
-  const arm = () => { clearTimeout(idle); idle = setTimeout(() => { if (cur() !== 0) go(-cur()); }, 4 * 60 * 1000); };
+  const arm = () => { clearTimeout(idle); idle = setTimeout(() => { if (cur() !== 0 && !location.pathname.endsWith('/tv-media')) go(-cur()); }, 4 * 60 * 1000); }; // dalla pagina Musica non torna da sola: ci pensa l'automazione quando la musica si ferma
   window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight' || e.keyCode === 22) { e.preventDefault(); e.stopPropagation(); go(1); arm(); }
     else if (e.key === 'ArrowLeft' || e.keyCode === 21) { e.preventDefault(); e.stopPropagation(); go(-1); arm(); }
