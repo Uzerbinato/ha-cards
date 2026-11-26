@@ -260,7 +260,11 @@ class FinestraCard extends HTMLElement {
   }
   async _ls(id) { try { const r = await this._h.callWS({ type: 'media_source/browse_media', media_content_id: id }); return r.children || []; } catch (e) { return []; } }
   async _videos(season, moment) {
-    const root = 'media-source://media_source/local/' + this._c.folder;
+    for (const f of [].concat(this._c.folder)) { const r = await this._videos1(f, season, moment); if (r.list.length) return r; }
+    return { list: [], moment };
+  }
+  async _videos1(folder, season, moment) {
+    const root = 'media-source://media_source/local/' + folder;
     const seasons = await this._ls(root); const sf = seasons.find((x) => x.title.toLowerCase() === season); if (!sf) return { list: [], moment };
     const moms = await this._ls(sf.media_content_id);
     const order = { alba: ['alba', 'giorno', 'tramonto', 'notte'], giorno: ['giorno', 'alba', 'tramonto', 'notte'], tramonto: ['tramonto', 'giorno', 'notte', 'alba'], notte: ['notte', 'tramonto', 'alba', 'giorno'] }[moment];
@@ -300,7 +304,7 @@ class FinestraCard extends HTMLElement {
     if (this._c.debug) { const d = document.createElement('div'); d.style.cssText = 'position:absolute;top:2vw;left:2vw;z-index:9;font:bold 1.6vw monospace;color:#ff0;background:rgba(0,0,0,.7);padding:.6vw 1vw;white-space:pre'; this.shadowRoot.querySelector('.fs').appendChild(d);
       clearInterval(this._dbg); this._dbg = setInterval(() => { const v = this.shadowRoot.getElementById('a'), ii = this.shadowRoot.querySelector('img.l.on'); d.textContent = (ii ? 'IMG ' + ii.naturalWidth + 'px ' + (ii.complete ? 'ok' : '…') + '  ' : '') + 'rs=' + v.readyState + ' ns=' + v.networkState + ' err=' + (v.error ? v.error.code + ' ' + (v.error.message || '') : '-') + ' t=' + v.currentTime.toFixed(1) + ' paused=' + v.paused + '\nsrc=' + (v.currentSrc || '').slice(-60) + '\nslot=' + this._slot + ' ua=' + navigator.userAgent.slice(-50); }, 1000); }
   }
-  _wait(season, moment) { const m = this.shadowRoot.getElementById('m'); m.style.opacity = 1; this.shadowRoot.getElementById('mt').textContent = `Nessun video per ${season} · ${moment}: aggiungilo nella cartella ${this._c.folder}/${season}/${moment} del NAS.`; }
+  _wait(season, moment) { const m = this.shadowRoot.getElementById('m'); m.style.opacity = 1; this.shadowRoot.getElementById('mt').textContent = `Nessun video per ${season} · ${moment}: aggiungilo nella cartella ${[].concat(this._c.folder)[0]}/${season}/${moment} del NAS.`; }
   _show(url, cap) {
     const R = this.shadowRoot, v = R.getElementById('a'), ia = R.getElementById('ia'), ib = R.getElementById('ib');
     const done = () => { this._shown = true; R.getElementById('m').style.display = 'none'; const cp = R.getElementById('cap'); cp.style.opacity = 0; setTimeout(() => { cp.textContent = cap; cp.style.opacity = 1; }, 1500); };
