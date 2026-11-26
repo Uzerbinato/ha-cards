@@ -309,7 +309,7 @@ class MediaTvCard extends HTMLElement {
       const e = await this._j(`https://${lang}.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&exsectionformat=wiki&exchars=4000&redirects=1&format=json&origin=*&titles=` + encodeURIComponent(hit.title));
       const p = Object.values(e.query.pages)[0]; if (!p || !p.extract) return null;
       // testo fino alle sezioni "di servizio" (tracce, classifiche, formazione, note...), senza i titoli di sezione
-      const out = []; for (const line of p.extract.split(/\n+/)) { const m = line.match(/^=+\s*(.*?)\s*=+$/); if (m) { if (/tracc|track|classific|chart|formazione|personnel|note|notes|refer|bibliog|collegament|external|video musicale|music video|cover|versioni|edizion|certific|credits|crediti|riconosc|accolad/i.test(m[1])) break; continue; } if (line.trim()) out.push(line.trim()); }
+      const out = []; for (const line of p.extract.split(/\n+/)) { const m = line.match(/^=+\s*(.*?)\s*=+$/); if (m) { if (/tracc|track|classific|chart|formazione|personnel|note|notes|refer|bibliog|collegament|external|video musicale|music video|cover|versioni|edizion|certific|credits|crediti|riconosc|accolad|struttura|structure|composizione e struttura/i.test(m[1])) break; continue; } if (line.trim()) out.push(line.trim()); }
       const text = out.join('\n'); if (text.length < 280) return null;
       return { title: p.title, text, url: `https://${lang}.wikipedia.org/wiki/` + encodeURIComponent(p.title.replace(/ /g, '_')), lang };
     };
@@ -326,9 +326,15 @@ class MediaTvCard extends HTMLElement {
     for (const [lang, q] of [['it', ar], ['en', ar + ' band singer musician']]) {
       try {
         const s = await this._j(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srlimit=6&format=json&origin=*&srsearch=` + encodeURIComponent(q));
-        const hit = (s.query && s.query.search || []).find((x) => norm(x.title).startsWith(na)); if (!hit) continue;
-        const e = await this._j(`https://${lang}.wikipedia.org/w/api.php?action=query&prop=description|extracts&exintro=1&explaintext=1&exsentences=3&redirects=1&format=json&origin=*&titles=` + encodeURIComponent(hit.title));
-        const p = Object.values(e.query.pages)[0]; if (!p || !p.extract || p.extract.length < 60) continue;
+        const mus = /(gruppo|band|cantant|singer|musicist|musician|rapper|cantautor|duo|orchestra|compositor|composer|dj)/i;
+        const hits = (s.query && s.query.search || []).filter((x) => norm(x.title).startsWith(na)).sort((x, y) => (mus.test(y.title) ? 1 : 0) - (mus.test(x.title) ? 1 : 0));
+        let p = null;
+        for (const hit of hits.slice(0, 3)) {
+          const e = await this._j(`https://${lang}.wikipedia.org/w/api.php?action=query&prop=description|extracts&exintro=1&explaintext=1&exsentences=3&redirects=1&format=json&origin=*&titles=` + encodeURIComponent(hit.title));
+          const q = Object.values(e.query.pages)[0];
+          if (q && q.extract && q.extract.length >= 60 && !/disambig|può riferirsi|may refer to/i.test((q.description || '') + q.extract.slice(0, 120)) && (mus.test(q.title + ' ' + (q.description || '') + ' ' + q.extract.slice(0, 300)) || /music|song|album|canzon|brano/i.test(q.extract.slice(0, 400)))) { p = q; break; }
+        }
+        if (!p) continue;
         if (this._info !== info) return; info.artistWiki = { name: p.title.replace(/\s*\(.*\)$/, ''), desc: p.description || '', text: p.extract.replace(/\s*\([^)]*\)/g, '').replace(/\s+/g, ' ').trim(), lang }; this._render(); return;
       } catch (e) {}
     }
