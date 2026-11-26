@@ -281,8 +281,8 @@ class MediaTvCard extends HTMLElement {
     if (k !== this._k) { this._k = k; this._k2 = k2; this._t0 = Date.now(); this._render(); this._lookup(a); }
     else this._tick(); }
   connectedCallback() { clearInterval(this._iv); this._iv = setInterval(() => this._tick(), 1000);
-    if (!this._kh) this._kh = (e) => { if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return; const st = this.shadowRoot && this.shadowRoot.getElementById('story'); if (!st || !this.isConnected) return;
-      e.preventDefault(); e.stopPropagation(); st.scrollBy({ top: (e.key === 'ArrowDown' ? 1 : -1) * st.clientHeight * 0.7, behavior: 'smooth' }); setTimeout(() => this._mask(), 450); };
+    if (!this._kh) this._kh = (e) => { const dn = e.key === 'ArrowDown' || e.keyCode === 20, up = e.key === 'ArrowUp' || e.keyCode === 19; if (!dn && !up) return; const st = this.shadowRoot && this.shadowRoot.getElementById('story'); if (!st || !this.isConnected) return;
+      e.preventDefault(); e.stopPropagation(); st.scrollBy({ top: (dn ? 1 : -1) * st.clientHeight * 0.7, behavior: 'smooth' }); setTimeout(() => this._mask(), 450); };
     window.addEventListener('keydown', this._kh, true); }
   disconnectedCallback() { clearInterval(this._iv); window.removeEventListener('keydown', this._kh, true); }
   _mask() { const R = this.shadowRoot, st = R && R.getElementById('story'), hn = R && R.getElementById('hint'); if (!st) return;
