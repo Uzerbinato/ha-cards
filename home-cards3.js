@@ -296,9 +296,12 @@ class MediaTvCard extends HTMLElement {
     const tryWiki = async (lang, q, must) => {
       const s = await this._j(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srlimit=6&format=json&origin=*&srsearch=` + encodeURIComponent(q));
       const hit = (s.query && s.query.search || []).find((x) => must(norm(x.title))); if (!hit) return null;
-      const e = await this._j(`https://${lang}.wikipedia.org/w/api.php?action=query&prop=extracts|pageimages&exintro=1&explaintext=1&redirects=1&format=json&origin=*&titles=` + encodeURIComponent(hit.title));
-      const p = Object.values(e.query.pages)[0]; if (!p || !p.extract || p.extract.length < (lang === 'it' ? 60 : 120)) return null;
-      return { title: p.title, text: p.extract, url: `https://${lang}.wikipedia.org/wiki/` + encodeURIComponent(p.title.replace(/ /g, '_')), lang };
+      const e = await this._j(`https://${lang}.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&exsectionformat=wiki&exchars=4000&redirects=1&format=json&origin=*&titles=` + encodeURIComponent(hit.title));
+      const p = Object.values(e.query.pages)[0]; if (!p || !p.extract) return null;
+      // testo fino alle sezioni "di servizio" (tracce, classifiche, formazione, note...), senza i titoli di sezione
+      const out = []; for (const line of p.extract.split(/\n+/)) { const m = line.match(/^=+\s*(.*?)\s*=+$/); if (m) { if (/tracc|track|classific|chart|formazione|personnel|note|notes|refer|bibliog|collegament|external|video musicale|music video|cover|versioni|edizion|certific|credits|crediti|riconosc|accolad/i.test(m[1])) break; continue; } if (line.trim()) out.push(line.trim()); }
+      const text = out.join('\n'); if (text.length < 280) return null;
+      return { title: p.title, text, url: `https://${lang}.wikipedia.org/wiki/` + encodeURIComponent(p.title.replace(/ /g, '_')), lang };
     };
     const nt = norm(t), na = norm(ar), nal = norm(clean(info.album || a.media_album_name || ''));
     const steps = [
@@ -365,7 +368,7 @@ class MediaTvCard extends HTMLElement {
         <div><h1>${esc(clean(a.media_title))}</h1><div class="art">${esc(a.media_artist || I.artistItunes || '')}</div><div class="alb">${esc([I.album || a.media_album_name, I.year].filter(Boolean).join(' · '))}</div></div>
         <div class="prog"><span id="el"></span><div class="track"><div id="bar"></div></div><span>${I.dur || a.media_duration ? mmss(a.media_duration || I.dur) : ''}</span></div>
         <div class="panels">
-          <div class="pn"><h2>${w ? kindLab[w.kind] : 'La storia del brano'}</h2><div class="story">${w ? w.text.split(/\n+/).filter((x) => x.trim()).slice(0, 5).map((p) => `<p>${esc(p)}</p>`).join('') : `<p class="wait">${I.done ? 'Nessuna informazione trovata su Wikipedia per questo brano.' : 'Cerco la storia del brano…'}</p>`}</div>${w ? `<div class="src">Fonte: Wikipedia${w.lang === 'en' ? ' (in inglese)' : ''} · «${esc(w.title)}» · CC BY-SA</div>` : ''}</div>
+          <div class="pn"><h2>${w ? kindLab[w.kind] : 'La storia del brano'}</h2><div class="story">${w ? w.text.split(/\n+/).filter((x) => x.trim()).slice(0, 8).map((p) => `<p>${esc(p)}</p>`).join('') : `<p class="wait">${I.done ? 'Nessuna informazione trovata su Wikipedia per questo brano.' : 'Cerco la storia del brano…'}</p>`}</div>${w ? `<div class="src">Fonte: Wikipedia${w.lang === 'en' ? ' (in inglese)' : ''} · «${esc(w.title)}» · CC BY-SA</div>` : ''}</div>
           <div class="pn"><h2>Dettagli</h2><dl class="dl">${det.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl><div class="vol"><i></i></div></div>
         </div>
       </div></div>` : `<div class="idle"><div class="c" id="clk"></div><div class="m">${esc(this._c.name || 'Musica')} · nessun brano in riproduzione</div></div>`}
