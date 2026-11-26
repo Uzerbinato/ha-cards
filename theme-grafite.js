@@ -81,6 +81,14 @@
   let fitUntil = Date.now() + 12000;
   window.addEventListener('location-changed', () => { fitUntil = Date.now() + 12000; });
   setInterval(() => { if (Date.now() < fitUntil) fit(); }, 1200);
+  // controllo lento ogni 30 s: corregge solo se la pagina esce dallo schermo o lascia più del 10% vuoto
+  setInterval(() => {
+    if (Date.now() < fitUntil) return;
+    const find = (n, tg) => { if (!n) return null; if (n.tagName === tg) return n; for (const ch of [...(n.shadowRoot ? n.shadowRoot.children : []), ...(n.children || [])]) { const r = find(ch, tg); if (r) return r; } return null; };
+    const v = find(document.querySelector('home-assistant'), 'HUI-SECTIONS-VIEW'); const ct = v && v.shadowRoot && v.shadowRoot.querySelector('.container');
+    if (!ct) return; const r = (ct.getBoundingClientRect().bottom + 12) / Math.max(1, window.innerHeight);
+    if (r > 1.0 || (r < 0.9 && z < 1.4)) fitUntil = Date.now() + 8000;
+  }, 30000);
   // testi piccoli più leggibili da lontano: ingrandisce del 22% i testi HTML sotto i 15 px (non gli SVG)
   const seen = new WeakSet();
   const boost = (root) => {
