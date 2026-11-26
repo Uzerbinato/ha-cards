@@ -263,3 +263,112 @@ ${spk.length || sl ? `<div class="row">
 if (!customElements.get('receiver-card')) customElements.define('receiver-card', ReceiverCard);
 (window.customCards = window.customCards || []).push({ type: 'receiver-card', name: 'Amplificatore', description: 'Amplificatore con sorgenti e volume (stile Casa)' });
 })();
+
+/* ---------------- MEDIA TV: pagina musica a schermo intero ----------------
+   config: entity (media_player), name
+   Copertina e dettagli da iTunes; storia del brano da Wikipedia (it, poi en), con fonte. */
+(() => {
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const clean = (t) => (t || '').replace(/\s*[\(\[].*?(remaster|live|version|edit|mix|deluxe|mono|stereo).*?[\)\]]/ig, '').replace(/\s+-\s+(remaster|live|single|radio).*$/i, '').trim();
+const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+const mmss = (s) => { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+class MediaTvCard extends HTMLElement {
+  setConfig(c) { this._c = c || {}; if (!this.shadowRoot) this.attachShadow({ mode: 'open' }); this._info = {}; }
+  getCardSize() { return 12; }
+  set hass(h) { this._h = h; const s = h.states[this._c.entity]; const a = s ? s.attributes : {};
+    const k = [s && s.state, a.media_title, a.media_artist].join('|');
+    if (k !== this._k) { this._k = k; this._render(); this._lookup(a); }
+    else this._tick(); }
+  connectedCallback() { clearInterval(this._iv); this._iv = setInterval(() => this._tick(), 1000); }
+  disconnectedCallback() { clearInterval(this._iv); }
+  async _j(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+  async _lookup(a) {
+    const t = clean(a.media_title), ar = (a.media_artist || '').trim(); if (!t) return;
+    const key = ar + '|' + t; if (this._info.key === key) return; const info = this._info = { key };
+    // iTunes: copertina grande, album, anno, genere, durata, numero traccia
+    try { const j = await this._j('https://itunes.apple.com/search?entity=song&limit=5&country=it&term=' + encodeURIComponent(ar + ' ' + t));
+      const r = (j.results || []).find((x) => norm(x.artistName).includes(norm(ar).split(' ')[0]) && norm(x.trackName).startsWith(norm(t).slice(0, 12))) || (j.results || [])[0];
+      if (r) Object.assign(info, { art: r.artworkUrl100.replace('100x100bb', '1200x1200bb'), album: r.collectionName, year: (r.releaseDate || '').slice(0, 4), genre: r.primaryGenreName, dur: r.trackTimeMillis / 1000, track: r.trackNumber, tracks: r.trackCount, artistItunes: r.artistName });
+    } catch (e) {}
+    if (this._info !== info) return; this._render();
+    // Wikipedia: prima il brano, poi l'album, poi l'artista
+    const tryWiki = async (lang, q, must) => {
+      const s = await this._j(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srlimit=6&format=json&origin=*&srsearch=` + encodeURIComponent(q));
+      const hit = (s.query && s.query.search || []).find((x) => must(norm(x.title))); if (!hit) return null;
+      const e = await this._j(`https://${lang}.wikipedia.org/w/api.php?action=query&prop=extracts|pageimages&exintro=1&explaintext=1&redirects=1&format=json&origin=*&titles=` + encodeURIComponent(hit.title));
+      const p = Object.values(e.query.pages)[0]; if (!p || !p.extract || p.extract.length < 120) return null;
+      return { title: p.title, text: p.extract, url: `https://${lang}.wikipedia.org/wiki/` + encodeURIComponent(p.title.replace(/ /g, '_')), lang };
+    };
+    const nt = norm(t), na = norm(ar), nal = norm(clean(info.album || a.media_album_name || ''));
+    const steps = [
+      ['brano', 'it', `${t} ${ar} brano`, (x) => x.startsWith(nt)], ['brano', 'en', `${t} ${ar} song`, (x) => x.startsWith(nt)],
+      ['album', 'it', `${nal} ${ar} album`, (x) => nal && x.startsWith(nal.slice(0, 14))], ['album', 'en', `${nal} ${ar} album`, (x) => nal && x.startsWith(nal.slice(0, 14))],
+      ['artista', 'it', ar, (x) => x.startsWith(na)], ['artista', 'en', ar + ' musician', (x) => x.startsWith(na)]];
+    for (const [kind, lang, q, must] of steps) { if (!q.trim()) continue; try { const w = await tryWiki(lang, q, must); if (w) { info.wiki = Object.assign(w, { kind }); break; } } catch (e) {} }
+    if (this._info === info) { info.done = true; this._render(); }
+  }
+  _pos() { const s = this._h && this._h.states[this._c.entity]; if (!s) return [0, 0]; const a = s.attributes;
+    const dur = a.media_duration || this._info.dur || 0; let p = a.media_position || 0;
+    if (s.state === 'playing' && a.media_position_updated_at) p += (Date.now() - Date.parse(a.media_position_updated_at)) / 1000;
+    return [dur ? Math.min(p, dur) : p, dur]; }
+  _tick() { const R = this.shadowRoot; if (!R) return; const b = R.getElementById('bar'), e = R.getElementById('el'), cl = R.getElementById('clk');
+    if (cl) cl.textContent = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    if (!b) return; const [p, d] = this._pos(); b.style.width = d ? (100 * p / d).toFixed(2) + '%' : '0%'; if (e) e.textContent = d ? mmss(p) : ''; }
+  _render() {
+    const h = this._h; if (!h) return; const s = h.states[this._c.entity], a = s ? s.attributes : {}, I = this._info || {};
+    const play = s && s.state === 'playing', on = s && ['playing', 'paused', 'buffering'].includes(s.state) && a.media_title;
+    const art = a.entity_picture || I.art || '';
+    const z = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+    const vol = Math.round((a.volume_level || 0) * 100);
+    const w = I.wiki;
+    const kindLab = { brano: 'La storia del brano', album: 'L’album', artista: 'L’artista' };
+    const det = [['Album', I.album || a.media_album_name], ['Anno', I.year], ['Genere', I.genre], ['Traccia', I.track ? I.track + (I.tracks ? ' di ' + I.tracks : '') : ''], ['Durata', I.dur ? mmss(I.dur) : ''], ['Sorgente', a.source], ['Volume', vol + '%']].filter(([, v]) => v);
+    this.shadowRoot.innerHTML = `<style>
+      :host{display:block}
+      .fs{position:fixed;inset:0;z-index:5;overflow:hidden;background:#07090b;color:#eef2f6;font-family:var(--primary-font-family,Roboto,sans-serif);zoom:${(1 / z).toFixed(4)}}
+      .bg{position:absolute;inset:-60px;background:center/cover no-repeat;filter:blur(60px) brightness(.38) saturate(1.4);transform:scale(1.1);transition:background-image 1s}
+      .vg{position:absolute;inset:0;background:radial-gradient(120% 100% at 30% 40%,transparent 0%,rgba(0,0,0,.55) 75%)}
+      .wrap{position:absolute;inset:0;display:grid;grid-template-columns:40vw 1fr;gap:3.2vw;padding:4.5vh 4vw 5vh}
+      .left{display:flex;flex-direction:column;justify-content:center;gap:2.4vh}
+      .cov{width:100%;aspect-ratio:1;border-radius:1.2vw;background:#1b2128 center/cover no-repeat;box-shadow:0 3vh 7vh rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.06)}
+      .cov.none{display:grid;place-items:center;background:linear-gradient(135deg,#f5b544,#9a3412)}
+      .right{display:flex;flex-direction:column;min-height:0;gap:2.2vh}
+      .top{display:flex;align-items:center;gap:1vw;font-size:1.05vw;letter-spacing:.22em;text-transform:uppercase;color:rgba(238,242,246,.6)}
+      .top .dot{width:.7vw;height:.7vw;border-radius:50%;background:${play ? '#4ade80' : '#fbbf24'};box-shadow:0 0 1vw ${play ? '#4ade80' : '#fbbf24'}}
+      .top .clk{margin-left:auto;letter-spacing:0;font-size:2.2vw;font-weight:200;text-transform:none;color:#f1f5f9}
+      h1{margin:.6vh 0 0;font-size:4.1vw;line-height:1.05;font-weight:700;letter-spacing:-.01em}
+      .art{font-size:2.1vw;color:#fcd34d;font-weight:500}
+      .alb{font-size:1.35vw;color:rgba(238,242,246,.7);margin-top:.4vh}
+      .prog{display:flex;align-items:center;gap:1vw;font-size:1.1vw;color:rgba(238,242,246,.65);font-variant-numeric:tabular-nums}
+      .track{flex:1;height:.55vh;border-radius:1vh;background:rgba(255,255,255,.14);overflow:hidden}
+      #bar{height:100%;background:linear-gradient(90deg,#fbbf24,#f59e0b);border-radius:1vh;transition:width 1s linear}
+      .panels{flex:1;min-height:0;display:grid;grid-template-columns:1.65fr 1fr;gap:1.6vw}
+      .pn{background:rgba(10,14,18,.55);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);border-radius:1vw;padding:2.6vh 1.6vw;min-height:0;display:flex;flex-direction:column}
+      .pn h2{margin:0 0 1.4vh;font-size:1vw;letter-spacing:.22em;text-transform:uppercase;color:rgba(252,211,77,.9);font-weight:600}
+      .story{flex:1;min-height:0;overflow:hidden;font-size:1.32vw;line-height:1.55;color:rgba(238,242,246,.9);-webkit-mask-image:linear-gradient(180deg,#000 82%,transparent);mask-image:linear-gradient(180deg,#000 82%,transparent)}
+      .story p{margin:0 0 1.2vh}
+      .src{margin-top:1.2vh;font-size:.85vw;color:rgba(238,242,246,.45)}
+      .dl{display:grid;grid-template-columns:auto 1fr;gap:1.3vh 1.2vw;font-size:1.25vw;align-content:start}
+      .dl dt{color:rgba(238,242,246,.5)}.dl dd{margin:0;color:#eef2f6;font-weight:500}
+      .vol{height:.5vh;border-radius:1vh;background:rgba(255,255,255,.14);margin-top:.9vh;overflow:hidden}.vol i{display:block;height:100%;width:${vol}%;background:#94a3b8}
+      .idle{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vh;color:rgba(238,242,246,.7)}
+      .idle .c{font-size:7vw;font-weight:200;color:#f1f5f9}.idle .m{font-size:1.6vw}
+      .wait{color:rgba(238,242,246,.45);font-style:italic}
+    </style><div class="fs"><div class="bg" style="${art ? `background-image:url('${art}')` : ''}"></div><div class="vg"></div>
+    ${on ? `<div class="wrap">
+      <div class="left">${art ? `<div class="cov" style="background-image:url('${art}')"></div>` : `<div class="cov none"><ha-icon icon="mdi:music" style="--mdc-icon-size:10vw;color:rgba(26,18,6,.8)"></ha-icon></div>`}</div>
+      <div class="right">
+        <div class="top"><span class="dot"></span>${esc(this._c.name || a.friendly_name || 'Musica')} · ${play ? 'In riproduzione' : 'In pausa'}${a.source ? ' · ' + esc(a.source) : ''}<span class="clk" id="clk"></span></div>
+        <div><h1>${esc(clean(a.media_title))}</h1><div class="art">${esc(a.media_artist || I.artistItunes || '')}</div><div class="alb">${esc([I.album || a.media_album_name, I.year].filter(Boolean).join(' · '))}</div></div>
+        <div class="prog"><span id="el"></span><div class="track"><div id="bar"></div></div><span>${I.dur || a.media_duration ? mmss(a.media_duration || I.dur) : ''}</span></div>
+        <div class="panels">
+          <div class="pn"><h2>${w ? kindLab[w.kind] : 'La storia del brano'}</h2><div class="story">${w ? w.text.split(/\n+/).filter((x) => x.trim()).slice(0, 5).map((p) => `<p>${esc(p)}</p>`).join('') : `<p class="wait">${I.done ? 'Nessuna informazione trovata su Wikipedia per questo brano.' : 'Cerco la storia del brano…'}</p>`}</div>${w ? `<div class="src">Fonte: Wikipedia${w.lang === 'en' ? ' (in inglese)' : ''} · «${esc(w.title)}» · CC BY-SA</div>` : ''}</div>
+          <div class="pn"><h2>Dettagli</h2><dl class="dl">${det.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl><div class="vol"><i></i></div></div>
+        </div>
+      </div></div>` : `<div class="idle"><div class="c" id="clk"></div><div class="m">${esc(this._c.name || 'Musica')} · nessun brano in riproduzione</div></div>`}
+    </div>`;
+    this._tick();
+  }
+}
+if (!customElements.get('media-tv-card')) customElements.define('media-tv-card', MediaTvCard);
+})();

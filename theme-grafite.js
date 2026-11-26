@@ -116,7 +116,7 @@
 // Schermo TV: più pagine navigabili con le frecce del telecomando, con transizioni e indicatore
 (() => {
   if (!/CrKey|Cast/i.test(navigator.userAgent) && !/[?&]tv=1/.test(location.search)) return;
-  const PAGES = [['tv', 'Ufficio'], ['tv-energia', 'Energia'], ['tv-clima', 'Clima'], ['tv-camere', 'Telecamere']];
+  const PAGES = [['tv', 'Ufficio'], ['tv-energia', 'Energia'], ['tv-clima', 'Clima'], ['tv-camere', 'Telecamere'], ['tv-media', 'Musica']];
   const base = () => location.pathname.split('/').slice(0, 2).join('/');
   const cur = () => Math.max(0, PAGES.findIndex(([p]) => location.pathname.endsWith('/' + p)));
   const css = document.createElement('style');
