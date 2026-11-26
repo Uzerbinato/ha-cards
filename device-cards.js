@@ -296,6 +296,8 @@ class FinestraCard extends HTMLElement {
       <div class="blk" id="k"></div><div class="msg" id="m" style="z-index:2"><h1>${this._c.title || 'Sala riunioni'}</h1><p id="mt">${this._c.text || ''}</p></div><div class="cap" id="cap"></div><div class="t" id="t"></div></div>`;
     const t = this.shadowRoot.getElementById('t'); const tick = () => { t.textContent = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); };
     tick(); clearInterval(this._iv); this._iv = setInterval(tick, 10000);
+    if (this._c.debug) { const d = document.createElement('div'); d.style.cssText = 'position:absolute;top:2vw;left:2vw;z-index:9;font:bold 1.6vw monospace;color:#ff0;background:rgba(0,0,0,.7);padding:.6vw 1vw;white-space:pre'; this.shadowRoot.querySelector('.fs').appendChild(d);
+      clearInterval(this._dbg); this._dbg = setInterval(() => { const v = this.shadowRoot.getElementById('a'); d.textContent = 'rs=' + v.readyState + ' ns=' + v.networkState + ' err=' + (v.error ? v.error.code + ' ' + (v.error.message || '') : '-') + ' t=' + v.currentTime.toFixed(1) + ' paused=' + v.paused + '\nsrc=' + (v.currentSrc || '').slice(-60) + '\nslot=' + this._slot + ' ua=' + navigator.userAgent.slice(-50); }, 1000); }
   }
   _wait(season, moment) { const m = this.shadowRoot.getElementById('m'); m.style.opacity = 1; this.shadowRoot.getElementById('mt').textContent = `Nessun video per ${season} · ${moment}: aggiungilo nella cartella ${this._c.folder}/${season}/${moment} del NAS.`; }
   _show(url, cap) {
